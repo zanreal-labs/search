@@ -1,8 +1,37 @@
 // User directory search example with fuzzy matching and typo tolerance
-import { search, quickSearch, createSearcher } from '../dist/index.mjs';
+import { search, quickSearch, createSearcher } from '../src/index';
+
+// Define types for better TypeScript support
+interface Profile {
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  email: string;
+}
+
+interface Employment {
+  department: string;
+  title: string;
+  team: string;
+  location: string;
+}
+
+interface User {
+  id: number;
+  profile: Profile;
+  employment: Employment;
+  skills: string[];
+  projects: string[];
+  bio: string;
+}
+
+interface UserWithSearchableFields extends User {
+  skillsText: string;
+  projectsText: string;
+}
 
 // Sample user directory data
-const users = [
+const users: User[] = [
   {
     id: 1,
     profile: {
@@ -127,7 +156,7 @@ fuzzyResults.forEach(result => {
 // 3. Skill-based search
 console.log('\n3. Search by skills - "react":');
 // Note: Since skills is an array, we need to convert users to have searchable skill strings
-const usersWithSkillStrings = users.map(user => ({
+const usersWithSkillStrings: UserWithSearchableFields[] = users.map(user => ({
   ...user,
   skillsText: user.skills.join(' '), // Convert array to searchable string
   projectsText: user.projects.join(' ') // Convert array to searchable string
@@ -195,7 +224,7 @@ locationResults.forEach(result => {
 
 // 7. Custom user searcher for HR use
 console.log('\n7. HR search for "engineer" with comprehensive matching:');
-const hrSearcher = createSearcher({
+const hrSearcher = createSearcher<UserWithSearchableFields>({
   fieldWeights: {
     'employment.title': 15,
     'employment.team': 10,

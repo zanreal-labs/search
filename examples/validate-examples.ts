@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // Example Validation Script - Universal Search Library
 // This script validates that all examples work correctly
 
@@ -10,11 +10,11 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const examples = [
-  'basic-usage.mjs',
-  'advanced-search.mjs',
-  'document-search.mjs',
-  'user-directory.mjs',
-  'performance-demo.mjs'
+  'basic-usage.ts',
+  'advanced-search.ts',
+  'document-search.ts',
+  'user-directory.ts',
+  'performance-demo.ts'
 ];
 
 const colors = {
@@ -26,14 +26,24 @@ const colors = {
   cyan: '\x1b[36m'
 };
 
-async function runExample(exampleFile) {
+interface ExampleResult {
+  file: string;
+  success: boolean;
+  code?: number;
+  duration: number;
+  stdout?: string;
+  stderr?: string;
+  error?: string;
+}
+
+async function runExample(exampleFile: string): Promise<ExampleResult> {
   const filePath = join(__dirname, exampleFile);
 
   console.log(`${colors.cyan}Testing: ${exampleFile}${colors.reset}`);
 
   return new Promise((resolve) => {
     const startTime = Date.now();
-    const child = spawn('node', [filePath], {
+    const child = spawn('bun', [filePath], {
       stdio: 'pipe',
       cwd: process.cwd()
     });
@@ -51,7 +61,7 @@ async function runExample(exampleFile) {
 
     child.on('close', (code) => {
       const duration = Date.now() - startTime;
-      const result = {
+      const result: ExampleResult = {
         file: exampleFile,
         success: code === 0,
         code,
@@ -84,38 +94,28 @@ async function runExample(exampleFile) {
   });
 }
 
-async function checkPrerequisites() {
+async function checkPrerequisites(): Promise<boolean> {
   console.log(`${colors.cyan}Checking prerequisites...${colors.reset}`);
 
-  // Check if dist directory exists
+  // For TypeScript examples, we just need the source files to exist
   try {
-    await access(join(__dirname, '../dist'));
-    console.log(`${colors.green}✅ dist/ directory found${colors.reset}`);
+    await access(join(__dirname, '../src/index.ts'));
+    console.log(`${colors.green}✅ Source library found${colors.reset}`);
   } catch {
-    console.log(`${colors.red}❌ dist/ directory not found. Run 'npm run build' first.${colors.reset}`);
-    return false;
-  }
-
-  // Check if dist/index.mjs exists
-  try {
-    await access(join(__dirname, '../dist/index.mjs'));
-    console.log(`${colors.green}✅ Built library found${colors.reset}`);
-  } catch {
-    console.log(`${colors.red}❌ Built library not found. Run 'npm run build' first.${colors.reset}`);
+    console.log(`${colors.red}❌ Source library not found at ../src/index.ts${colors.reset}`);
     return false;
   }
 
   return true;
 }
 
-async function validateExamples() {
+async function validateExamples(): Promise<void> {
   console.log(`${colors.cyan}${colors.bright}Universal Search - Example Validation${colors.reset}\n`);
 
   // Check prerequisites
   const prereqsOk = await checkPrerequisites();
   if (!prereqsOk) {
-    console.log(`\n${colors.yellow}Please build the library first:${colors.reset}`);
-    console.log(`${colors.yellow}  npm run build${colors.reset}\n`);
+    console.log(`\n${colors.yellow}Please ensure the source files are available.${colors.reset}\n`);
     process.exit(1);
   }
 
@@ -133,7 +133,7 @@ async function validateExamples() {
   console.log(`${colors.cyan}Running ${examples.length} examples...${colors.reset}\n`);
 
   // Run all examples
-  const results = [];
+  const results: ExampleResult[] = [];
   for (const example of examples) {
     const result = await runExample(example);
     results.push(result);
@@ -173,6 +173,6 @@ process.on('SIGINT', () => {
 
 // Run validation
 validateExamples().catch(error => {
-  console.error(`${colors.red}❌ Validation error: ${error.message}${colors.reset}`);
+  console.error(`${colors.red}❌ Validation error: ${(error as Error).message}${colors.reset}`);
   process.exit(1);
 });

@@ -1,8 +1,19 @@
 // Advanced search example with custom field weights and configuration
-import { search, createSearcher } from '../dist/index.mjs';
+import { search, createSearcher } from '../src/index';
+
+// Define types for better TypeScript support
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  brand: string;
+  description: string;
+  price: number;
+  tags: string[];
+}
 
 // Sample e-commerce product data
-const products = [
+const products: Product[] = [
   {
     id: 1,
     name: 'MacBook Pro M3',
@@ -70,7 +81,7 @@ weightedResults.forEach(result => {
 
 // 3. Create specialized searcher for product names only
 console.log('\n3. Product name-only search:');
-const nameSearcher = createSearcher({
+const nameSearcher = createSearcher<Product>({
   fields: ['name'],
   fieldWeights: { name: 1 },
   fuzzyThreshold: 0.6

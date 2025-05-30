@@ -1,6 +1,6 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // Interactive Examples Runner - Universal Search Library
-// Run this to explore examples interactively: node examples/run-examples.mjs
+// Run this to explore examples interactively: bun examples/run-examples.ts
 
 import { readdir } from 'fs/promises';
 import { spawn } from 'child_process';
@@ -24,37 +24,45 @@ const colors = {
   white: '\x1b[37m'
 };
 
-const examples = [
+interface Example {
+  file: string;
+  title: string;
+  description: string;
+  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  duration: string;
+}
+
+const examples: Example[] = [
   {
-    file: 'basic-usage.mjs',
+    file: 'basic-usage.ts',
     title: '🔰 Basic Usage',
     description: 'Learn fundamental search patterns and configurations',
     difficulty: 'Beginner',
     duration: '2-3 minutes'
   },
   {
-    file: 'document-search.mjs',
+    file: 'document-search.ts',
     title: '📄 Document Search',
     description: 'CMS and blog search with metadata handling',
     difficulty: 'Beginner',
     duration: '3-4 minutes'
   },
   {
-    file: 'user-directory.mjs',
+    file: 'user-directory.ts',
     title: '👥 User Directory',
     description: 'People search with fuzzy matching and skills',
     difficulty: 'Intermediate',
     duration: '4-5 minutes'
   },
   {
-    file: 'advanced-search.mjs',
+    file: 'advanced-search.ts',
     title: '🏪 Advanced Search',
     description: 'E-commerce product search with custom scoring',
     difficulty: 'Intermediate',
     duration: '5-6 minutes'
   },
   {
-    file: 'performance-demo.mjs',
+    file: 'performance-demo.ts',
     title: '⚡ Performance Demo',
     description: 'Large dataset optimization and benchmarks',
     difficulty: 'Advanced',
@@ -62,7 +70,7 @@ const examples = [
   }
 ];
 
-function printHeader() {
+function printHeader(): void {
   console.clear();
   console.log(`${colors.cyan}${colors.bright}`);
   console.log('╔══════════════════════════════════════════════════════════════╗');
@@ -72,7 +80,7 @@ function printHeader() {
   console.log(`${colors.reset}\n`);
 }
 
-function printMenu() {
+function printMenu(): void {
   console.log(`${colors.bright}Available Examples:${colors.reset}\n`);
 
   examples.forEach((example, index) => {
@@ -91,13 +99,13 @@ function printMenu() {
   console.log(`${colors.white}q.${colors.reset} ${colors.red}Quit${colors.reset}\n`);
 }
 
-async function runExample(exampleFile) {
+async function runExample(exampleFile: string): Promise<void> {
   const filePath = join(__dirname, exampleFile);
 
   console.log(`${colors.cyan}${colors.bright}Running: ${exampleFile}${colors.reset}\n`);
 
   return new Promise((resolve, reject) => {
-    const child = spawn('node', [filePath], {
+    const child = spawn('bun', [filePath], {
       stdio: 'inherit',
       cwd: process.cwd()
     });
@@ -119,7 +127,7 @@ async function runExample(exampleFile) {
   });
 }
 
-async function runAllExamples() {
+async function runAllExamples(): Promise<void> {
   console.log(`${colors.magenta}${colors.bright}Running all examples...${colors.reset}\n`);
 
   for (let i = 0; i < examples.length; i++) {
@@ -142,7 +150,7 @@ async function runAllExamples() {
   console.log(`${colors.green}${colors.bright}All examples completed!${colors.reset}\n`);
 }
 
-function waitForInput() {
+function waitForInput(): Promise<void> {
   return new Promise((resolve) => {
     const rl = createInterface({
       input: process.stdin,
@@ -156,7 +164,7 @@ function waitForInput() {
   });
 }
 
-async function getUserChoice() {
+async function getUserChoice(): Promise<string> {
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout
@@ -170,7 +178,7 @@ async function getUserChoice() {
   });
 }
 
-async function main() {
+async function main(): Promise<void> {
   try {
     // Check if examples directory exists and has the expected files
     const exampleFiles = await readdir(__dirname);
@@ -221,7 +229,7 @@ async function main() {
       }
     }
   } catch (error) {
-    console.error(`${colors.red}❌ Error: ${error.message}${colors.reset}`);
+    console.error(`${colors.red}❌ Error: ${(error as Error).message}${colors.reset}`);
     process.exit(1);
   }
 }

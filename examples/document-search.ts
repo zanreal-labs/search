@@ -1,8 +1,36 @@
 // Document search example with nested objects and content analysis
-import { search, createDocumentSearcher, searchItems } from '../dist/index.mjs';
+import { search, createDocumentSearcher, searchItems } from '../src/index';
+
+// Define types for better TypeScript support
+interface Author {
+  name: string;
+  email: string;
+  bio: string;
+}
+
+interface Content {
+  summary: string;
+  body: string;
+  wordCount: number;
+}
+
+interface Metadata {
+  category: string;
+  tags: string[];
+  publishDate: string;
+  readTime: number;
+}
+
+interface Document {
+  id: string;
+  title: string;
+  author: Author;
+  content: Content;
+  metadata: Metadata;
+}
 
 // Sample document data with nested structure
-const documents = [
+const documents: Document[] = [
   {
     id: 'doc1',
     title: 'Introduction to TypeScript',

@@ -1,8 +1,37 @@
 // Real-world search scenarios with performance considerations
-import { search, createSearcher } from '../dist/index.mjs';
+import { search, createSearcher } from '../src/index';
+
+// Define types for better TypeScript support
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  brand: string;
+  description: string;
+  price: number;
+  rating: string;
+  inStock: boolean;
+  tags: string[];
+}
+
+interface EcommerceSearchOptions {
+  category?: string;
+  maxPrice?: number;
+  minRating?: number;
+  inStockOnly?: boolean;
+  sortBy?: 'relevance' | 'price' | 'rating';
+}
+
+interface SearchAnalytics {
+  totalResults: number;
+  avgScore: number;
+  categoryBreakdown: Record<string, number>;
+  matchTypes: Record<string, number>;
+  topResult?: any;
+}
 
 // Simulate a larger dataset for performance testing
-function generateTestData(count = 1000) {
+function generateTestData(count = 1000): Product[] {
   const categories = ['Electronics', 'Books', 'Clothing', 'Home & Garden', 'Sports', 'Automotive'];
   const brands = ['Apple', 'Samsung', 'Sony', 'Microsoft', 'Google', 'Amazon', 'Nike', 'Adidas'];
   const adjectives = ['Premium', 'Professional', 'Compact', 'Advanced', 'Smart', 'Wireless', 'Portable'];
@@ -59,7 +88,7 @@ perfResults.slice(0, 5).forEach((result, index) => {
 // 2. E-commerce search with filters
 console.log('\n2. E-commerce search with filtering:');
 
-function ecommerceSearch(dataset, query, options = {}) {
+function ecommerceSearch(dataset: Product[], query: string, options: EcommerceSearchOptions = {}) {
   const {
     category,
     maxPrice,
@@ -130,7 +159,7 @@ laptopResults.slice(0, 3).forEach(result => {
 // 3. Auto-complete simulation
 console.log('\n3. Auto-complete search simulation:');
 
-function autoComplete(dataset, query, limit = 5) {
+function autoComplete(dataset: Product[], query: string, limit = 5) {
   if (query.length < 2) return [];
 
   return search(dataset, query, {
@@ -158,7 +187,7 @@ autocompleteQueries.forEach(query => {
 // 4. Search analytics
 console.log('4. Search analytics example:');
 
-function analyzeSearchResults(dataset, query) {
+function analyzeSearchResults(dataset: Product[], query: string): SearchAnalytics {
   const results = search(dataset, query, {
     limit: 100 // Get more results for analysis
   });
@@ -168,7 +197,7 @@ function analyzeSearchResults(dataset, query) {
     const category = result.item.category;
     acc[category] = (acc[category] || 0) + 1;
     return acc;
-  }, {});
+  }, {} as Record<string, number>);
 
   // Analyze match types
   const matchTypes = results.reduce((acc, result) => {
@@ -176,7 +205,7 @@ function analyzeSearchResults(dataset, query) {
       acc[match.type] = (acc[match.type] || 0) + 1;
     });
     return acc;
-  }, {});
+  }, {} as Record<string, number>);
 
   return {
     totalResults: results.length,
@@ -198,7 +227,7 @@ console.log(`  Top result: ${analytics.topResult?.item.name}\n`);
 // 5. Optimized searcher for specific use case
 console.log('5. Optimized product searcher:');
 
-const productSearcher = createSearcher({
+const productSearcher = createSearcher<Product>({
   fieldWeights: {
     name: 15,
     brand: 12,

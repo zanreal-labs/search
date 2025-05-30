@@ -1,6 +1,6 @@
 // Basic Usage Examples - Universal Search Library
 // This example demonstrates fundamental search patterns and configurations
-import { search, quickSearch, createSearcher } from '../dist/index.mjs';
+import { search, quickSearch, createSearcher } from '../src/index';
 
 // Sample data with nested objects
 const users = [
@@ -150,7 +150,7 @@ const analytics = {
   totalResults: analyticsResults.length,
   avgScore: analyticsResults.length > 0
     ? (analyticsResults.reduce((sum, r) => sum + r.score, 0) / analyticsResults.length).toFixed(2)
-    : 0,
+    : '0',
   topResult: analyticsResults[0]?.item.name || 'None',
   departments: [...new Set(analyticsResults.map(r => r.item.profile.department))]
 };
@@ -176,4 +176,4 @@ console.log('\n🎯 Next Steps:');
 console.log('- Try modifying the sample data to match your use case');
 console.log('- Experiment with different field weights');
 console.log('- Test with various search queries and typos');
-console.log('- Check out other examples: advanced-search.mjs, user-directory.mjs');
+console.log('- Check out other examples: advanced-search.ts, user-directory.ts');
