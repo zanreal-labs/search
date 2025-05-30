@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  analyze:
+    name: Codecov
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Run Tests
+        run: bun test
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.6.0
+        with:
+          fail_ci_if_error: true
+          directory: ./coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
