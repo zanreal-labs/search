@@ -84,7 +84,7 @@ function getNestedValue(obj: any, path: string): string {
         return current[key];
       }
       return "";
-    }, obj) || ""
+    }, obj) ?? ""
   );
 }
 
@@ -237,7 +237,7 @@ export function search<T>(
     const avgLength = count > 0 ? totalLength / count : 0;
 
     // Calculate weight based on field name and average length
-    const fieldName = fieldPath.split(".").pop()?.toLowerCase() || "";
+    const fieldName = fieldPath.split(".").pop()?.toLowerCase() ?? "";
     let baseWeight = 1;
 
     // Higher weight for common important fields

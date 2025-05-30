@@ -15,13 +15,26 @@ A powerful TypeScript fuzzy search library with intelligent scoring, exact match
 ## Installation
 
 ```bash
-bun install
+npm install @zanreal/universal-search
+```
+
+Or with other package managers:
+
+```bash
+# Yarn
+yarn add @zanreal/universal-search
+
+# pnpm
+pnpm add @zanreal/universal-search
+
+# Bun
+bun add @zanreal/universal-search
 ```
 
 ## Quick Start
 
 ```typescript
-import { search, searchItems, quickSearch } from './src/index';
+import { search, searchItems, quickSearch } from '@zanreal/universal-search';
 
 // Simple search - returns just the matching items
 const data = [

@@ -1,0 +1,26 @@
+# Source files
+src/
+tsconfig.json
+tsconfig.build.json
+bun.lock
+
+# Development files
+.git/
+.vscode/
+.idea/
+*.log
+*.tgz
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+test/
+tests/
+__tests__/
+
+# Build artifacts (keep dist)
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db

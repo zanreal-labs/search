@@ -1,11 +1,72 @@
 {
-  "name": "search",
-  "module": "src/index.ts",
+  "name": "@zanreal/search",
+  "version": "1.0.0",
+  "description": "A powerful TypeScript fuzzy search library with intelligent scoring, exact match prioritization, and automatic field detection for any object structure",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
   "type": "module",
-  "devDependencies": {
-    "@types/bun": "latest"
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
-  "peerDependencies": {
-    "typescript": "^5"
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "scripts": {
+    "build": "bun run build:clean && bun run build:esm && bun run build:cjs && bun run build:types",
+    "build:clean": "rm -rf dist",
+    "build:esm": "bun build src/index.ts --outfile=dist/index.mjs --format=esm --minify",
+    "build:cjs": "bun build src/index.ts --outfile=dist/index.js --format=cjs --minify",
+    "build:types": "tsc --project tsconfig.build.json",
+    "prepublishOnly": "bun run build",
+    "test": "bun test",
+    "test:example": "node example.mjs",
+    "dev": "bun run src/index.ts",
+    "check": "tsc --noEmit",
+    "publish:dry": "npm pack --dry-run",
+    "size": "bundlesize",
+    "examples": "node examples/run-examples.mjs",
+    "examples:validate": "node examples/validate-examples.mjs",
+    "examples:basic": "node examples/basic-usage.mjs",
+    "examples:advanced": "node examples/advanced-search.mjs",
+    "examples:documents": "node examples/document-search.mjs",
+    "examples:users": "node examples/user-directory.mjs",
+    "examples:performance": "node examples/performance-demo.mjs"
+  },
+  "keywords": [
+    "search",
+    "fuzzy-search",
+    "typescript",
+    "full-text-search",
+    "autocomplete",
+    "filter",
+    "query",
+    "universal-search",
+    "intelligent-search",
+    "levenshtein",
+    "text-matching"
+  ],
+  "author": "ZanReal Labs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zanreal/universal-search.git"
+  },
+  "bugs": {
+    "url": "https://github.com/zanreal/universal-search/issues"
+  },
+  "homepage": "https://github.com/zanreal/universal-search#readme",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
