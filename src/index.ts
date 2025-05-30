@@ -19,17 +19,14 @@ export interface SearchOptions {
   caseSensitive?: boolean;
 }
 
-/** Default search options */
-const _defaultSearchOptions = {
+/** Exported default search options */
+export const DEFAULT_SEARCH_OPTIONS = {
   fieldWeights: {} as Record<string, number>,
   fuzzyThreshold: 0.7,
   minFuzzyLength: 3,
   limit: 100,
   caseSensitive: false,
-} as const;
-
-/** Exported default search options */
-export const DEFAULT_SEARCH_OPTIONS = _defaultSearchOptions;
+};
 
 export interface SearchResult<T> {
   item: T;
@@ -205,11 +202,11 @@ export function search<T>(
 
   const {
     fields,
-    fieldWeights = _defaultSearchOptions.fieldWeights,
-    fuzzyThreshold = _defaultSearchOptions.fuzzyThreshold,
-    minFuzzyLength = _defaultSearchOptions.minFuzzyLength,
-    limit = _defaultSearchOptions.limit,
-    caseSensitive = _defaultSearchOptions.caseSensitive,
+    fieldWeights = DEFAULT_SEARCH_OPTIONS.fieldWeights,
+    fuzzyThreshold = DEFAULT_SEARCH_OPTIONS.fuzzyThreshold,
+    minFuzzyLength = DEFAULT_SEARCH_OPTIONS.minFuzzyLength,
+    limit = DEFAULT_SEARCH_OPTIONS.limit,
+    caseSensitive = DEFAULT_SEARCH_OPTIONS.caseSensitive,
   } = options;
 
   const searchQuery = query.trim();
@@ -353,11 +350,11 @@ export function createSearcher<T>(config: SearchOptions) {
  */
 export function createDocumentSearcher<T>() {
   return createSearcher<T>({
-    fieldWeights: _defaultSearchOptions.fieldWeights,
-    fuzzyThreshold: _defaultSearchOptions.fuzzyThreshold,
-    minFuzzyLength: _defaultSearchOptions.minFuzzyLength,
-    limit: _defaultSearchOptions.limit,
-    caseSensitive: _defaultSearchOptions.caseSensitive,
+    fieldWeights: DEFAULT_SEARCH_OPTIONS.fieldWeights,
+    fuzzyThreshold: DEFAULT_SEARCH_OPTIONS.fuzzyThreshold,
+    minFuzzyLength: DEFAULT_SEARCH_OPTIONS.minFuzzyLength,
+    limit: DEFAULT_SEARCH_OPTIONS.limit,
+    caseSensitive: DEFAULT_SEARCH_OPTIONS.caseSensitive,
   });
 }
 
@@ -371,10 +368,10 @@ export function quickSearch<T>(
 ): T[] {
   return searchItems(data, query, {
     fields,
-    fieldWeights: _defaultSearchOptions.fieldWeights,
-    fuzzyThreshold: _defaultSearchOptions.fuzzyThreshold,
-    minFuzzyLength: _defaultSearchOptions.minFuzzyLength,
-    limit: _defaultSearchOptions.limit,
-    caseSensitive: _defaultSearchOptions.caseSensitive,
+    fieldWeights: DEFAULT_SEARCH_OPTIONS.fieldWeights,
+    fuzzyThreshold: DEFAULT_SEARCH_OPTIONS.fuzzyThreshold,
+    minFuzzyLength: DEFAULT_SEARCH_OPTIONS.minFuzzyLength,
+    limit: DEFAULT_SEARCH_OPTIONS.limit,
+    caseSensitive: DEFAULT_SEARCH_OPTIONS.caseSensitive,
   });
 }

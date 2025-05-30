@@ -10,6 +10,8 @@ bun.lock
 .idea/
 *.log
 *.tgz
+benchmarks/
+examples/
 
 # Test files
 **/*.test.ts

@@ -37,7 +37,13 @@
     "examples:advanced": "node examples/advanced-search.mjs",
     "examples:documents": "node examples/document-search.mjs",
     "examples:users": "node examples/user-directory.mjs",
-    "examples:performance": "node examples/performance-demo.mjs"
+    "examples:performance": "node examples/performance-demo.mjs",
+    "benchmark": "bun benchmarks/full-suite.ts",
+    "benchmark:main": "bun benchmarks/run-benchmarks.ts",
+    "benchmark:comparative": "bun benchmarks/run-comparative.ts",
+    "benchmark:memory": "bun benchmarks/run-memory.ts",
+    "benchmark:gc": "bun --bun benchmarks/full-suite.ts --gc",
+    "benchmark:quick": "bun benchmarks/quick.ts"
   },
   "keywords": [
     "search",
