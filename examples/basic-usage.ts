@@ -81,7 +81,7 @@ console.log();
 
 // 3. Custom Searcher - Reusable configuration
 console.log('=== 3. Custom Searcher (reusable configuration) ===');
-const peopleSearcher = createSearcher({
+const peopleSearcher = createSearcher<typeof users[0]>({
   fieldWeights: {
     name: 15,             // Names are most important for people search
     'profile.title': 10,  // Job titles are very important

@@ -64,7 +64,7 @@ async function runExample(exampleFile: string): Promise<ExampleResult> {
       const result: ExampleResult = {
         file: exampleFile,
         success: code === 0,
-        code,
+        code: code ?? undefined,
         duration,
         stdout,
         stderr

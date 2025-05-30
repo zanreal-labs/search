@@ -37,21 +37,28 @@ function generateTestData(count = 1000): Product[] {
   const adjectives = ['Premium', 'Professional', 'Compact', 'Advanced', 'Smart', 'Wireless', 'Portable'];
   const products = ['Laptop', 'Phone', 'Tablet', 'Watch', 'Speaker', 'Camera', 'Keyboard', 'Mouse'];
 
-  return Array.from({ length: count }, (_, i) => ({
-    id: i + 1,
-    name: `${adjectives[i % adjectives.length]} ${products[i % products.length]} ${brands[i % brands.length]}`,
-    category: categories[i % categories.length],
-    brand: brands[i % brands.length],
-    description: `High-quality ${products[i % products.length].toLowerCase()} from ${brands[i % brands.length]} with advanced features and premium build quality.`,
-    price: Math.floor(Math.random() * 2000) + 50,
-    rating: (Math.random() * 2 + 3).toFixed(1), // 3.0 to 5.0
-    inStock: Math.random() > 0.2,
-    tags: [
-      products[i % products.length].toLowerCase(),
-      brands[i % brands.length].toLowerCase(),
-      categories[i % categories.length].toLowerCase()
-    ]
-  }));
+  return Array.from({ length: count }, (_, i) => {
+    const productName = products[i % products.length]!;
+    const brandName = brands[i % brands.length]!;
+    const categoryName = categories[i % categories.length]!;
+    const adjectiveName = adjectives[i % adjectives.length]!;
+
+    return {
+      id: i + 1,
+      name: `${adjectiveName} ${productName} ${brandName}`,
+      category: categoryName,
+      brand: brandName,
+      description: `High-quality ${productName.toLowerCase()} from ${brandName} with advanced features and premium build quality.`,
+      price: Math.floor(Math.random() * 2000) + 50,
+      rating: (Math.random() * 2 + 3).toFixed(1), // 3.0 to 5.0
+      inStock: Math.random() > 0.2,
+      tags: [
+        productName.toLowerCase(),
+        brandName.toLowerCase(),
+        categoryName.toLowerCase()
+      ]
+    };
+  });
 }
 
 console.log('=== Performance & Real-world Examples ===\n');

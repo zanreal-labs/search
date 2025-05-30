@@ -131,7 +131,7 @@ async function runAllExamples(): Promise<void> {
   console.log(`${colors.magenta}${colors.bright}Running all examples...${colors.reset}\n`);
 
   for (let i = 0; i < examples.length; i++) {
-    const example = examples[i];
+    const example = examples[i]!;
     console.log(`${colors.yellow}[${i + 1}/${examples.length}] ${example.title}${colors.reset}`);
 
     try {
@@ -213,7 +213,7 @@ async function main(): Promise<void> {
       const exampleIndex = parseInt(choice) - 1;
 
       if (exampleIndex >= 0 && exampleIndex < examples.length) {
-        const example = examples[exampleIndex];
+        const example = examples[exampleIndex]!;
         try {
           await runExample(example.file);
         } catch (error) {
