@@ -15,26 +15,26 @@ A powerful TypeScript fuzzy search library with intelligent scoring, exact match
 ## Installation
 
 ```bash
-npm install @zanreal/universal-search
+npm install @zanreal/search
 ```
 
 Or with other package managers:
 
 ```bash
 # Yarn
-yarn add @zanreal/universal-search
+yarn add @zanreal/search
 
 # pnpm
-pnpm add @zanreal/universal-search
+pnpm add @zanreal/search
 
 # Bun
-bun add @zanreal/universal-search
+bun add @zanreal/search
 ```
 
 ## Quick Start
 
 ```typescript
-import { search, searchItems, quickSearch } from '@zanreal/universal-search';
+import { search, searchItems, quickSearch } from '@zanreal/search';
 
 // Simple search - returns just the matching items
 const data = [
@@ -271,7 +271,7 @@ npm run examples:validate
 #### Quick Search Pattern
 
 ```javascript
-import { quickSearch } from '@zanreal/universal-search';
+import { quickSearch } from '@zanreal/search';
 
 // Fastest way to search - returns just the items
 const results = quickSearch(data, query);
@@ -280,7 +280,7 @@ const results = quickSearch(data, query);
 #### Detailed Search Pattern
 
 ```javascript
-import { search } from '@zanreal/universal-search';
+import { search } from '@zanreal/search';
 
 // Full control with scoring and configuration
 const results = search(data, query, {
@@ -292,7 +292,7 @@ const results = search(data, query, {
 #### Reusable Searcher Pattern
 
 ```javascript
-import { createSearcher } from '@zanreal/universal-search';
+import { createSearcher } from '@zanreal/search';
 
 // Create once, use many times for better performance
 const searcher = createSearcher({

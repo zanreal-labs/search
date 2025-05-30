@@ -53,7 +53,7 @@
     "autocomplete",
     "filter",
     "query",
-    "universal-search",
+    "search",
     "intelligent-search",
     "levenshtein",
     "text-matching"
@@ -62,12 +62,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zanreal/universal-search.git"
+    "url": "https://github.com/zanreal-labs/search.git"
   },
   "bugs": {
-    "url": "https://github.com/zanreal/universal-search/issues"
+    "url": "https://github.com/zanreal-labs/search/issues"
   },
-  "homepage": "https://github.com/zanreal/universal-search#readme",
+  "homepage": "https://github.com/zanreal-labs/search#readme",
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^5.0.0"
