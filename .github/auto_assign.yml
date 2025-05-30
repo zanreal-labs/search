@@ -1,0 +1,12 @@
+addAssignees: true
+
+assignees:
+  - z4nr34l
+
+skipKeywords:
+  - wip
+
+skipUsers:
+  - dependabot[bot]
+
+numberOfAssignees: 0
