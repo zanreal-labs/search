@@ -105,25 +105,27 @@ export async function runMemoryBenchmarks() {
     const first = results[0];
     const last = results[results.length - 1];
 
-    const sizeMultiplier = last.dataSize / first.dataSize;
-    const timeMultiplier = last.avgSearchTime / first.avgSearchTime;
-    const memoryMultiplier = last.memoryDelta / first.memoryDelta;
+    if (first && last) {
+      const sizeMultiplier = last.dataSize / first.dataSize;
+      const timeMultiplier = last.avgSearchTime / first.avgSearchTime;
+      const memoryMultiplier = last.memoryDelta / first.memoryDelta;
 
-    console.log(`  📊 Data size increased: ${sizeMultiplier}x`);
-    console.log(`  ⏱️  Search time increased: ${timeMultiplier.toFixed(2)}x`);
-    console.log(`  💾 Memory usage increased: ${memoryMultiplier.toFixed(2)}x`);
+      console.log(`  📊 Data size increased: ${sizeMultiplier}x`);
+      console.log(`  ⏱️  Search time increased: ${timeMultiplier.toFixed(2)}x`);
+      console.log(`  💾 Memory usage increased: ${memoryMultiplier.toFixed(2)}x`);
 
-    const efficiency = sizeMultiplier / timeMultiplier;
-    console.log(`  ⚡ Search efficiency: ${efficiency.toFixed(2)} (higher is better)`);
+      const efficiency = sizeMultiplier / timeMultiplier;
+      console.log(`  ⚡ Search efficiency: ${efficiency.toFixed(2)} (higher is better)`);
 
-    if (efficiency > 0.8) {
-      console.log('  ✅ Excellent scalability - near linear performance');
-    } else if (efficiency > 0.6) {
-      console.log('  👍 Good scalability - performance degrades slowly');
-    } else if (efficiency > 0.4) {
-      console.log('  ⚠️  Fair scalability - noticeable performance impact');
-    } else {
-      console.log('  ❌ Poor scalability - significant performance degradation');
+      if (efficiency > 0.8) {
+        console.log('  ✅ Excellent scalability - near linear performance');
+      } else if (efficiency > 0.6) {
+        console.log('  👍 Good scalability - performance degrades slowly');
+      } else if (efficiency > 0.4) {
+        console.log('  ⚠️  Fair scalability - noticeable performance impact');
+      } else {
+        console.log('  ❌ Poor scalability - significant performance degradation');
+      }
     }
   }
 
@@ -167,20 +169,23 @@ export async function runMemoryLeakTest() {
   if (memorySnapshots.length >= 3) {
     const start = memorySnapshots[0];
     const end = memorySnapshots[memorySnapshots.length - 1];
-    const growth = end - start;
-    const growthPercent = (growth / start) * 100;
 
-    console.log(`\n🔬 Memory Leak Analysis:`);
-    console.log(`  Start memory: ${Math.round(start / 1024 / 1024)}MB`);
-    console.log(`  End memory: ${Math.round(end / 1024 / 1024)}MB`);
-    console.log(`  Growth: ${Math.round(growth / 1024 / 1024)}MB (${growthPercent.toFixed(1)}%)`);
+    if (start && end) {
+      const growth = end - start;
+      const growthPercent = (growth / start) * 100;
 
-    if (growthPercent < 5) {
-      console.log('  ✅ No significant memory leak detected');
-    } else if (growthPercent < 15) {
-      console.log('  ⚠️  Minor memory growth detected - monitor in production');
-    } else {
-      console.log('  ❌ Potential memory leak detected - investigate further');
+      console.log(`\n🔬 Memory Leak Analysis:`);
+      console.log(`  Start memory: ${Math.round(start / 1024 / 1024)}MB`);
+      console.log(`  End memory: ${Math.round(end / 1024 / 1024)}MB`);
+      console.log(`  Growth: ${Math.round(growth / 1024 / 1024)}MB (${growthPercent.toFixed(1)}%)`);
+
+      if (growthPercent < 5) {
+        console.log('  ✅ No significant memory leak detected');
+      } else if (growthPercent < 15) {
+        console.log('  ⚠️  Minor memory growth detected - monitor in production');
+      } else {
+        console.log('  ❌ Potential memory leak detected - investigate further');
+      }
     }
   }
 }

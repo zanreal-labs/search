@@ -34,14 +34,14 @@ export function generateUsers(count: number) {
 
   return Array.from({ length: count }, (_, i) => ({
     id: i + 1,
-    firstName: firstNames[i % firstNames.length],
-    lastName: lastNames[i % lastNames.length],
-    email: `${firstNames[i % firstNames.length].toLowerCase()}.${lastNames[i % lastNames.length].toLowerCase()}@${companies[i % companies.length].toLowerCase()}.com`,
-    company: companies[i % companies.length],
-    role: roles[i % roles.length],
-    department: departments[i % departments.length],
-    fullName: `${firstNames[i % firstNames.length]} ${lastNames[i % lastNames.length]}`,
-    bio: `Experienced ${roles[i % roles.length].toLowerCase()} at ${companies[i % companies.length]} working in ${departments[i % departments.length].toLowerCase()}. Passionate about technology and innovation.`,
+    firstName: firstNames[i % firstNames.length] || 'Unknown',
+    lastName: lastNames[i % lastNames.length] || 'Unknown',
+    email: `${(firstNames[i % firstNames.length] || 'unknown').toLowerCase()}.${(lastNames[i % lastNames.length] || 'unknown').toLowerCase()}@${(companies[i % companies.length] || 'unknown').toLowerCase()}.com`,
+    company: companies[i % companies.length] || 'Unknown Company',
+    role: roles[i % roles.length] || 'Unknown Role',
+    department: departments[i % departments.length] || 'Unknown Department',
+    fullName: `${firstNames[i % firstNames.length] || 'Unknown'} ${lastNames[i % lastNames.length] || 'Unknown'}`,
+    bio: `Experienced ${(roles[i % roles.length] || 'professional').toLowerCase()} at ${companies[i % companies.length] || 'Unknown Company'} working in ${(departments[i % departments.length] || 'unknown department').toLowerCase()}. Passionate about technology and innovation.`,
     skills: [
       'JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'Java', 'Go', 'Rust'
     ].slice(0, Math.floor(Math.random() * 4) + 2),
@@ -58,18 +58,18 @@ export function generateProducts(count: number) {
 
   return Array.from({ length: count }, (_, i) => ({
     id: i + 1,
-    name: `${adjectives[i % adjectives.length]} ${products[i % products.length]} ${brands[i % brands.length]}`,
-    category: categories[i % categories.length],
-    brand: brands[i % brands.length],
-    description: `High-quality ${products[i % products.length].toLowerCase()} from ${brands[i % brands.length]} with advanced features and premium build quality. Perfect for both personal and professional use.`,
+    name: `${adjectives[i % adjectives.length] || 'Standard'} ${products[i % products.length] || 'Product'} ${brands[i % brands.length] || 'Brand'}`,
+    category: categories[i % categories.length] || 'General',
+    brand: brands[i % brands.length] || 'Unknown Brand',
+    description: `High-quality ${(products[i % products.length] || 'product').toLowerCase()} from ${brands[i % brands.length] || 'Unknown Brand'} with advanced features and premium build quality. Perfect for both personal and professional use.`,
     price: Math.floor(Math.random() * 2000) + 50,
     rating: parseFloat((Math.random() * 2 + 3).toFixed(1)),
     inStock: Math.random() > 0.2,
     tags: [
-      products[i % products.length].toLowerCase(),
-      brands[i % brands.length].toLowerCase(),
-      categories[i % categories.length].toLowerCase(),
-      adjectives[i % adjectives.length].toLowerCase()
+      (products[i % products.length] || 'product').toLowerCase(),
+      (brands[i % brands.length] || 'brand').toLowerCase(),
+      (categories[i % categories.length] || 'category').toLowerCase(),
+      (adjectives[i % adjectives.length] || 'standard').toLowerCase()
     ],
     sku: `SKU-${String(i + 1).padStart(6, '0')}`,
     weight: Math.floor(Math.random() * 5000) + 100, // grams
@@ -100,11 +100,11 @@ export function generateDocuments(count: number) {
 
   return Array.from({ length: count }, (_, i) => ({
     id: i + 1,
-    title: `${titles[i % titles.length]} - Part ${Math.floor(i / titles.length) + 1}`,
-    author: authors[i % authors.length],
-    category: categories[i % categories.length],
-    content: `This is a comprehensive guide about ${titles[i % titles.length].toLowerCase()}. It covers all the essential concepts and provides practical examples for implementation. The document includes detailed explanations, code samples, and best practices that developers should follow.`,
-    summary: `A detailed guide covering ${titles[i % titles.length].toLowerCase()} with practical examples and best practices.`,
+    title: `${titles[i % titles.length] || 'Untitled Document'} - Part ${Math.floor(i / titles.length) + 1}`,
+    author: authors[i % authors.length] || 'Unknown Author',
+    category: categories[i % categories.length] || 'General',
+    content: `This is a comprehensive guide about ${(titles[i % titles.length] || 'general topics').toLowerCase()}. It covers all the essential concepts and provides practical examples for implementation. The document includes detailed explanations, code samples, and best practices that developers should follow.`,
+    summary: `A detailed guide covering ${(titles[i % titles.length] || 'general topics').toLowerCase()} with practical examples and best practices.`,
     tags: ['tutorial', 'guide', 'programming', 'development', 'best-practices'],
     publishedAt: new Date(2020 + (i % 4), i % 12, (i % 28) + 1).toISOString(),
     wordCount: Math.floor(Math.random() * 5000) + 500,

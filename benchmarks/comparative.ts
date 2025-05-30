@@ -117,7 +117,8 @@ async function runComparativeBenchmark() {
   console.log('\n🏆 Performance Ranking:');
   const ranked = [...results].sort((a, b) => b.opsPerSecond - a.opsPerSecond);
   ranked.forEach((result, index) => {
-    const percentage = index === 0 ? '100%' : `${Math.round((result.opsPerSecond / ranked[0].opsPerSecond) * 100)}%`;
+    const firstResult = ranked[0];
+    const percentage = index === 0 || !firstResult ? '100%' : `${Math.round((result.opsPerSecond / firstResult.opsPerSecond) * 100)}%`;
     console.log(`  ${index + 1}. ${result.functionName}: ${result.opsPerSecond} ops/sec (${percentage})`);
   });
 
