@@ -44,31 +44,43 @@ export interface SearchMatch {
 
 /**
  * Calculate Levenshtein distance between two strings
+ * Optimized to use O(min(m,n)) space instead of O(m*n)
  */
 function levenshteinDistance(str1: string, str2: string): number {
-  const matrix: number[][] = Array.from({ length: str2.length + 1 }, () =>
-    Array.from({ length: str1.length + 1 }, () => 0),
-  );
-
-  for (let i = 0; i <= str1.length; i++) {
-    matrix[0]![i] = i;
-  }
-  for (let j = 0; j <= str2.length; j++) {
-    matrix[j]![0] = j;
+  // Ensure str1 is the shorter string to minimize memory usage
+  if (str1.length > str2.length) {
+    [str1, str2] = [str2, str1];
   }
 
-  for (let i = 1; i <= str2.length; i++) {
-    for (let j = 1; j <= str1.length; j++) {
+  const len1 = str1.length;
+  const len2 = str2.length;
+
+  // Use only two arrays instead of a 2D matrix
+  let prevRow = new Array(len1 + 1);
+  let currRow = new Array(len1 + 1);
+
+  // Initialize first row
+  for (let i = 0; i <= len1; i++) {
+    prevRow[i] = i;
+  }
+
+  for (let i = 1; i <= len2; i++) {
+    currRow[0] = i;
+
+    for (let j = 1; j <= len1; j++) {
       const cost = str1[j - 1] === str2[i - 1] ? 0 : 1;
-      const deletion = matrix[i - 1]![j]! + 1;
-      const insertion = matrix[i]![j - 1]! + 1;
-      const substitution = matrix[i - 1]![j - 1]! + cost;
-
-      matrix[i]![j] = Math.min(deletion, insertion, substitution);
+      currRow[j] = Math.min(
+        prevRow[j] + 1,     // deletion
+        currRow[j - 1] + 1, // insertion
+        prevRow[j - 1] + cost // substitution
+      );
     }
+
+    // Swap arrays for next iteration
+    [prevRow, currRow] = [currRow, prevRow];
   }
 
-  return matrix[str2.length]![str1.length]!;
+  return prevRow[len1];
 }
 
 /**
@@ -85,12 +97,27 @@ function getNestedValue(obj: any, path: string): string {
   );
 }
 
+// Global cache for field detection to avoid repeated computation
+const fieldDetectionCache = new WeakMap<any, string[]>();
+
+// Global cache for processed strings to reduce memory allocation
+const stringProcessingCache = new Map<string, string>();
+const MAX_STRING_CACHE_SIZE = 500;
+
+// Global cache for field statistics to avoid recomputation  
+const fieldStatsCache = new WeakMap<any[], Map<string, { avgLength: number; weight: number }>>();
+
 /**
- * Automatically detect searchable string fields in an object
+ * Automatically detect searchable string fields in an object with caching
  */
 function detectStringFields(obj: any, prefix = "", maxDepth = 3): string[] {
   if (maxDepth <= 0 || !obj || typeof obj !== "object") {
     return [];
+  }
+
+  // Check cache first for the root object
+  if (prefix === "" && fieldDetectionCache.has(obj)) {
+    return fieldDetectionCache.get(obj)!;
   }
 
   const fields: string[] = [];
@@ -109,11 +136,41 @@ function detectStringFields(obj: any, prefix = "", maxDepth = 3): string[] {
     }
   }
 
+  // Cache the result for the root object
+  if (prefix === "") {
+    fieldDetectionCache.set(obj, fields);
+  }
+
   return fields;
 }
 
 /**
+ * Get processed (lowercased) string with caching and aggressive cleanup
+ */
+function getProcessedString(str: string, caseSensitive: boolean): string {
+  if (caseSensitive) return str;
+
+  const cacheKey = `lc:${str}`;
+  if (stringProcessingCache.has(cacheKey)) {
+    return stringProcessingCache.get(cacheKey)!;
+  }
+
+  const processed = str.toLowerCase();
+
+  // More aggressive cache size management
+  if (stringProcessingCache.size >= MAX_STRING_CACHE_SIZE) {
+    // Clear oldest entries (simple LRU-like behavior)
+    const keysToDelete = Array.from(stringProcessingCache.keys()).slice(0, MAX_STRING_CACHE_SIZE / 2);
+    keysToDelete.forEach(key => stringProcessingCache.delete(key));
+  }
+
+  stringProcessingCache.set(cacheKey, processed);
+  return processed;
+}
+
+/**
  * Calculate match score for a text field against a query
+ * Optimized to reduce memory allocations
  */
 function calculateFieldScore(
   text: string,
@@ -125,8 +182,8 @@ function calculateFieldScore(
 ): SearchMatch | null {
   if (!text || !query) return null;
 
-  const searchText = options.caseSensitive ? text : text.toLowerCase();
-  const searchQuery = options.caseSensitive ? query : query.toLowerCase();
+  const searchText = getProcessedString(text, options.caseSensitive);
+  const searchQuery = getProcessedString(query, options.caseSensitive);
 
   // Exact match from start (highest priority)
   if (searchText.startsWith(searchQuery)) {
@@ -140,8 +197,8 @@ function calculateFieldScore(
   }
 
   // Exact match anywhere
-  if (searchText.includes(searchQuery)) {
-    const position = searchText.indexOf(searchQuery);
+  const position = searchText.indexOf(searchQuery);
+  if (position !== -1) {
     // Earlier positions get higher scores, with length bonus for shorter strings
     const lengthBonus = Math.max(1, 100 / text.length); // Shorter strings get bonus
     const positionPenalty = position * 0.1;
@@ -156,30 +213,36 @@ function calculateFieldScore(
     };
   }
 
-  // Fuzzy matching for misspellings
+  // Fuzzy matching for misspellings - optimized to reduce string operations
   if (searchQuery.length >= options.minFuzzyLength) {
-    const words = searchText.split(/\s+/);
+    // Use a more efficient word splitting approach
     let bestMatch: SearchMatch | null = null;
+    let wordStart = 0;
 
-    for (const word of words) {
-      if (word.length >= 3) {
-        const distance = levenshteinDistance(word, searchQuery);
-        const maxLength = Math.max(word.length, searchQuery.length);
-        const similarity = (maxLength - distance) / maxLength;
+    for (let i = 0; i <= searchText.length; i++) {
+      const char = searchText[i];
+      if (i === searchText.length || (char && /\s/.test(char))) {
+        if (i - wordStart >= 3) {
+          const word = searchText.slice(wordStart, i);
+          const distance = levenshteinDistance(word, searchQuery);
+          const maxLength = Math.max(word.length, searchQuery.length);
+          const similarity = (maxLength - distance) / maxLength;
 
-        if (similarity >= options.fuzzyThreshold) {
-          const lengthBonus = Math.max(1, 50 / text.length); // Shorter strings get bonus
-          const score = fieldWeight * similarity * (2 + lengthBonus);
+          if (similarity >= options.fuzzyThreshold) {
+            const lengthBonus = Math.max(1, 50 / text.length);
+            const score = fieldWeight * similarity * (2 + lengthBonus);
 
-          if (!bestMatch || score > bestMatch.score) {
-            bestMatch = {
-              field: "",
-              value: text,
-              score,
-              type: "fuzzy",
-            };
+            if (!bestMatch || score > bestMatch.score) {
+              bestMatch = {
+                field: "",
+                value: text,
+                score,
+                type: "fuzzy",
+              };
+            }
           }
         }
+        wordStart = i + 1;
       }
     }
 
@@ -189,14 +252,27 @@ function calculateFieldScore(
   return null;
 }
 
+let searchCallCount = 0;
+
 /**
  * Universal search function that works with any data structure
+ * Optimized for memory efficiency and performance
  */
 export function search<T>(
   data: T[],
   query: string,
   options: SearchOptions = {},
 ): SearchResult<T>[] {
+  // Periodic cache cleanup every 100 search calls
+  searchCallCount++;
+  if (searchCallCount % 100 === 0) {
+    // Force a more aggressive cache cleanup
+    if (stringProcessingCache.size > MAX_STRING_CACHE_SIZE / 2) {
+      const keysToDelete = Array.from(stringProcessingCache.keys()).slice(0, MAX_STRING_CACHE_SIZE / 4);
+      keysToDelete.forEach(key => stringProcessingCache.delete(key));
+    }
+  }
+
   if (!query.trim())
     return data.map((item) => ({ item, score: 0, matches: [] }));
 
@@ -212,62 +288,80 @@ export function search<T>(
   const searchQuery = query.trim();
   const searchOptions = { fuzzyThreshold, minFuzzyLength, caseSensitive };
 
-  // Auto-detect fields if not provided
+  // Auto-detect fields if not provided (with caching)
   const searchFields =
     fields || (data.length > 0 ? detectStringFields(data[0]) : []);
 
-  // Calculate average length for each field across all data items
-  const calculateFieldStats = (
-    fieldPath: string,
-  ): { avgLength: number; weight: number } => {
-    let totalLength = 0;
-    let count = 0;
+  // Get or calculate field statistics with caching
+  let fieldStats: Map<string, { avgLength: number; weight: number }>;
 
-    for (const item of data) {
-      const text = getNestedValue(item, fieldPath);
-      if (text && typeof text === "string" && text.length > 0) {
-        totalLength += text.length;
-        count++;
+  if (fieldStatsCache.has(data)) {
+    fieldStats = fieldStatsCache.get(data)!;
+  } else {
+    fieldStats = new Map();
+
+    // Calculate average length for each field across all data items
+    const calculateFieldStats = (
+      fieldPath: string,
+    ): { avgLength: number; weight: number } => {
+      let totalLength = 0;
+      let count = 0;
+
+      // Sample only first 100 items for performance on large datasets
+      const sampleSize = Math.min(data.length, 100);
+      for (let i = 0; i < sampleSize; i++) {
+        const item = data[i];
+        const text = getNestedValue(item, fieldPath);
+        if (text && typeof text === "string" && text.length > 0) {
+          totalLength += text.length;
+          count++;
+        }
       }
+
+      const avgLength = count > 0 ? totalLength / count : 0;
+
+      // Calculate weight based on field name and average length
+      const fieldName = fieldPath.split(".").pop()?.toLowerCase() ?? "";
+      let baseWeight = 1;
+
+      // Higher weight for common important fields
+      if (["title", "name", "heading"].includes(fieldName)) baseWeight = 5;
+      else if (["description", "summary", "subtitle"].includes(fieldName))
+        baseWeight = 3;
+      else if (["content", "body", "text"].includes(fieldName)) baseWeight = 1;
+
+      // Prioritize fields with shorter average length (likely more important)
+      let lengthWeight = 1;
+      if (avgLength < 50)
+        lengthWeight = 2.0; // Very short fields (titles)
+      else if (avgLength < 100)
+        lengthWeight = 1.5; // Short fields (subtitles)
+      else if (avgLength < 300)
+        lengthWeight = 1.2; // Medium fields (descriptions)
+      else lengthWeight = 1.0; // Long fields (content)
+
+      return {
+        avgLength,
+        weight: baseWeight * lengthWeight,
+      };
+    };
+
+    // Pre-calculate field statistics for weight determination
+    for (const field of searchFields) {
+      fieldStats.set(field, calculateFieldStats(field));
     }
 
-    const avgLength = count > 0 ? totalLength / count : 0;
-
-    // Calculate weight based on field name and average length
-    const fieldName = fieldPath.split(".").pop()?.toLowerCase() ?? "";
-    let baseWeight = 1;
-
-    // Higher weight for common important fields
-    if (["title", "name", "heading"].includes(fieldName)) baseWeight = 5;
-    else if (["description", "summary", "subtitle"].includes(fieldName))
-      baseWeight = 3;
-    else if (["content", "body", "text"].includes(fieldName)) baseWeight = 1;
-
-    // Prioritize fields with shorter average length (likely more important)
-    let lengthWeight = 1;
-    if (avgLength < 50)
-      lengthWeight = 2.0; // Very short fields (titles)
-    else if (avgLength < 100)
-      lengthWeight = 1.5; // Short fields (subtitles)
-    else if (avgLength < 300)
-      lengthWeight = 1.2; // Medium fields (descriptions)
-    else lengthWeight = 1.0; // Long fields (content)
-
-    return {
-      avgLength,
-      weight: baseWeight * lengthWeight,
-    };
-  };
-
-  // Pre-calculate field statistics for weight determination
-  const fieldStats = new Map<string, { avgLength: number; weight: number }>();
-  for (const field of searchFields) {
-    fieldStats.set(field, calculateFieldStats(field));
+    // Cache the field stats
+    fieldStatsCache.set(data, fieldStats);
   }
 
   const results: SearchResult<T>[] = [];
+  const maxResults = limit ? limit * 3 : data.length; // Get more than needed for better sorting
 
-  for (const item of data) {
+  for (let itemIndex = 0; itemIndex < data.length; itemIndex++) {
+    const item = data[itemIndex];
+    if (!item) continue; // Skip undefined items
+
     const matches: SearchMatch[] = [];
     let totalScore = 0;
 
@@ -300,6 +394,11 @@ export function search<T>(
         score: totalScore,
         matches,
       });
+    }
+
+    // Early termination for large datasets
+    if (results.length >= maxResults) {
+      break;
     }
   }
 
@@ -374,4 +473,27 @@ export function quickSearch<T>(
     limit: DEFAULT_SEARCH_OPTIONS.limit,
     caseSensitive: DEFAULT_SEARCH_OPTIONS.caseSensitive,
   });
+}
+
+/**
+ * Clear all internal caches to free memory
+ * Useful for long-running applications or when switching between different datasets
+ */
+export function clearSearchCaches(): void {
+  stringProcessingCache.clear();
+  searchCallCount = 0; // Reset counter
+  // Note: WeakMaps (fieldDetectionCache, fieldStatsCache) will be cleared automatically by GC
+}
+
+/**
+ * Get cache statistics for monitoring memory usage
+ */
+export function getCacheStats(): {
+  stringProcessingCacheSize: number;
+  searchCallCount: number;
+} {
+  return {
+    stringProcessingCacheSize: stringProcessingCache.size,
+    searchCallCount,
+  };
 }
