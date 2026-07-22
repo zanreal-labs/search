@@ -1,0 +1,5 @@
+{
+  "title": "@zanreal/search",
+  "description": "Rozmyte wyszukiwanie w tablicach obiektów.",
+  "pages": ["index", "api"]
+}

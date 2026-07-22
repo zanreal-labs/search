@@ -1,0 +1,231 @@
+---
+title: Wprowadzenie
+description: "Rozmyte wyszukiwanie w tablicy obiektów trzymanej w pamięci: wagi pól, pierwszeństwo trafień dokładnych i automatyczne wykrywanie pól."
+---
+
+`@zanreal/search` przeszukuje tablicę obiektów, którą masz już w pamięci.
+Każdemu elementowi przyznaje punkty, trafienia dokładne stawia wyżej niż
+rozmyte, a jeśli nic mu nie narzucisz, sam ustala, które pola warto przeszukać.
+
+Nie musisz budować indeksu ani uruchamiać osobnej usługi. Biblioteka nie ma
+zależności.
+
+## Instalacja
+
+```bash
+npm install @zanreal/search
+# albo: pnpm add @zanreal/search
+# albo: bun add @zanreal/search
+```
+
+W paczce znajdziesz build ESM i CommonJS oraz deklaracje typów. Wymagany jest
+Node.js w wersji 16 lub nowszej.
+
+## Pierwsze wyszukiwanie
+
+Najkrótsza droga to `quickSearch`: podajesz dane i frazę, dostajesz pasujące
+elementy.
+
+```ts
+import { quickSearch } from "@zanreal/search";
+
+const employees = [
+  { name: "Anna Kowalska", email: "a.kowalska@firma.pl", role: "Frontend Developer" },
+  { name: "Piotr Nowak", email: "p.nowak@firma.pl", role: "Backend Developer" },
+  { name: "Marta Zielinska", email: "m.zielinska@firma.pl", role: "Projektantka UX" },
+];
+
+quickSearch(employees, "nowak");
+// → [{ name: "Piotr Nowak", ... }]
+```
+
+W przykładzie nie ma argumentu `fields`, dlatego biblioteka sama wzięła pod
+uwagę `name`, `email` oraz `role`. Wielkość liter domyślnie nie gra roli, a
+wyniki wracają uszeregowane według trafności.
+
+Widać to wyraźnie przy frazie, która pasuje do dwóch osób naraz:
+
+```ts
+quickSearch(employees, "developer");
+// → [{ name: "Piotr Nowak", ... }, { name: "Anna Kowalska", ... }]
+```
+
+Obie osoby mają „Developer" w polu `role`, ale „Backend Developer" jest
+krótsze, a fraza pada w nim odrobinę wcześniej. Stąd Piotr Nowak przed Anną
+Kowalską. To dobrze pokazuje regułę: przy trafieniu w środku tekstu liczy się
+zarówno długość pola, jak i pozycja frazy.
+
+## Literówki
+
+Po nieudanym dopasowaniu dokładnym biblioteka sięga po dopasowanie rozmyte,
+liczone odległością Levenshteina. Przestawione litery przestają więc być
+problemem:
+
+```ts
+quickSearch(employees, "kowalksa");
+// → [{ name: "Anna Kowalska", ... }]
+```
+
+Domyślnie fraza musi mieć co najmniej 3 znaki (`minFuzzyLength`) i być podobna
+do słowa w co najmniej 70 procentach (`fuzzyThreshold`). Porównanie działa na
+pojedynczych słowach, a nie na całej zawartości pola, więc literówka
+rozjeżdżająca się na dwa słowa nie zostanie wychwycona.
+
+## Polskie znaki
+
+Biblioteka nie sprowadza znaków diakrytycznych do postaci podstawowej. Mimo to
+zapytania pisane bez ogonków zwykle działają, bo różnicę wyłapuje dopasowanie
+rozmyte:
+
+```ts
+import { search } from "@zanreal/search";
+
+search([{ city: "Gdańsk" }], "gdansk"); // trafienie rozmyte
+search([{ city: "Kraków" }], "krakow"); // trafienie rozmyte
+search([{ city: "Częstochowa" }], "czestochowa"); // trafienie rozmyte
+```
+
+Ta sztuczka ma jednak wyraźną granicę. Im krótsze słowo i im więcej w nim
+ogonków, tym szybciej podobieństwo spada poniżej progu:
+
+```ts
+search([{ city: "Łódź" }], "lodz");
+// → [] ponieważ podobieństwo wynosi 0.25, a próg 0.7
+```
+
+Jeśli zapytania bez ogonków mają działać przewidywalnie, dołóż do danych pole z
+tekstem sprowadzonym do liter podstawowych i przeszukuj właśnie je. Uwaga na
+„ł": `normalize("NFD")` go nie rozłoży, bo to osobny znak, a nie litera ze
+znakiem łączącym. Trzeba go podmienić ręcznie:
+
+```ts
+const fold = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/ł/g, "l")
+    .replace(/Ł/g, "L");
+
+const cities = [{ name: "Łódź" }, { name: "Gdańsk" }].map((city) => ({
+  ...city,
+  nameFolded: fold(city.name),
+}));
+
+search(cities, "lodz", { fields: ["nameFolded"] });
+// → [{ name: "Łódź", nameFolded: "Lodz" }]
+```
+
+## Które pola trafiają do wyszukiwania
+
+Wykrywanie pól opiera się wyłącznie na **pierwszym elemencie tablicy** i schodzi
+najwyżej trzy poziomy w głąb. Zbierane są tylko niepuste napisy; tablice,
+liczby, `null` i puste napisy zostają pominięte.
+
+Przy jednorodnych danych jest to wygodne, ale w dwóch sytuacjach zawodzi:
+
+- elementy mają różny kształt, a pole, którego brakuje w `data[0]`, nie zostanie
+  przeszukane w żadnym elemencie
+- rekordy są szerokie, a interesują Cię dwa czy trzy pola
+
+W obu przypadkach wskaż pola samodzielnie, zagnieżdżone zapisem z kropką:
+
+```ts
+search(articles, "typescript", {
+  fields: ["title", "author.name", "meta.summary"],
+});
+```
+
+Każda ścieżka musi prowadzić do napisu. Wskazanie liczby albo tablicy kończy się
+wyjątkiem `TypeError` w trakcie dopasowywania, więc takie wartości zamień
+wcześniej na tekst.
+
+## Wagi pól
+
+Bez wskazówek biblioteka wylicza wagę pola z jego nazwy i średniej długości, co
+premiuje krótkie etykiety w rodzaju `title` kosztem długich opisów.
+
+Heurystyka rozpoznaje jednak wyłącznie angielskie nazwy: `title`, `name`,
+`heading`, `description`, `summary` i podobne. Jeśli w projekcie pola nazywają
+się `naglowek` czy `opis`, wszystkie dostaną tę samą wagę bazową i o kolejności
+zdecyduje sama długość tekstu. Przy polskim nazewnictwie wagi warto podać
+wprost:
+
+```ts
+search(articles, "typescript", {
+  fieldWeights: {
+    naglowek: 10,
+    "meta.skrot": 5,
+    "tresc.body": 1,
+  },
+});
+```
+
+Wagi to zwykłe mnożniki, więc trafienie w nagłówek liczy się tu dziesięć razy
+mocniej niż takie samo trafienie w treści. Klucz musi być pełną ścieżką z
+kropkami, identyczną jak w `fields`.
+
+### Wyliczone wagi zapamiętują się dla całej tablicy
+
+Wagi liczone automatycznie powstają raz dla danej tablicy, rozpoznawanej po
+tożsamości obiektu, i wracają przy każdym kolejnym wyszukiwaniu w tej samej
+tablicy. Kluczem cache jest sama tablica, bez oglądania się na listę `fields`,
+więc pole dołożone w późniejszym wywołaniu nie ma policzonych statystyk i po
+cichu dostaje wagę `1`:
+
+```ts
+const dane = [{ title: "alpha", body: "alpha ...długa treść..." }];
+
+search(dane, "alpha", { fields: ["body"] });
+// statystyki policzone tylko dla `body`
+
+search(dane, "alpha", { fields: ["body", "title"] });
+// `title` nie było w pierwszym wywołaniu → waga 1 zamiast wyliczonej 10
+```
+
+Trafienie w `title` dostaje wtedy 20 punktów zamiast 200. Problem wychodzi przy
+zawężaniu albo poszerzaniu `fields` między wywołaniami na tej samej tablicy oraz
+wtedy, gdy modyfikujesz tablicę w miejscu i liczysz na to, że wagi za tym
+nadążą. Są dwa pewne obejścia: podaj `fieldWeights` wprost, żeby nic nie było
+wyliczane, albo trzymaj stałą listę `fields` przez cały czas życia tablicy.
+
+## Gotowa wyszukiwarka
+
+Powtarzanie tych samych opcji przy każdym wywołaniu szybko męczy.
+`createSearcher` zapamiętuje konfigurację i oddaje gotową funkcję:
+
+```ts
+import { createSearcher } from "@zanreal/search";
+
+type Article = { title: string; body: string };
+
+const searchArticles = createSearcher<Article>({
+  fieldWeights: { title: 10, body: 1 },
+  fuzzyThreshold: 0.7,
+  limit: 20,
+});
+
+searchArticles(articles, "typescript");
+```
+
+Zwracana funkcja daje pełne obiekty `SearchResult`, a nie same elementy. Trzeci
+argument nadpisuje zapamiętaną konfigurację na czas jednego wywołania:
+
+```ts
+searchArticles(articles, "typescript", { limit: 5 });
+```
+
+Późniejsze strojenie sprowadza się wtedy do jednej linijki:
+
+```diff
+ const searchArticles = createSearcher<Article>({
+   fieldWeights: { title: 10, body: 1 },
+-  fuzzyThreshold: 0.7,
++  fuzzyThreshold: 0.85,
+   limit: 20,
+ });
+```
+
+## Dalej
+
+Pełny wykaz funkcji, opcji i typów, razem z domyślnymi wartościami i obsługą
+cache, znajdziesz w [dokumentacji API](./api.pl.mdx).
