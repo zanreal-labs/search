@@ -22,7 +22,8 @@ Three behaviours are worth knowing:
 - A blank or whitespace-only query short-circuits and returns **every** item
   with `score: 0` and `matches: []`. The `limit` option is not applied on this
   path.
-- Falsy entries in `data` (`null`, `undefined`) are skipped rather than throwing.
+- Any falsy entry in `data`, such as `null` or `undefined`, is skipped rather
+  than throwing.
 - Items are returned only if at least one field matched.
 
 ### `searchItems`

@@ -23,8 +23,8 @@ Trzy zachowania warto zapamiętać:
 - Puste zapytanie, albo złożone z samych białych znaków, kończy działanie od
   razu i zwraca **wszystkie** elementy z `score: 0` oraz pustą tablicą
   `matches`. Opcja `limit` nie jest wtedy brana pod uwagę.
-- Wartości `null` i `undefined` w tablicy `data` są pomijane, a nie zgłaszane
-  jako błąd.
+- Każdy element tablicy `data`, który JavaScript uznaje za fałsz (`null`,
+  `undefined`, `0`, pusty napis), jest pomijany, a nie zgłaszany jako błąd.
 - Element trafia do wyniku tylko wtedy, gdy dopasowało się przynajmniej jedno
   pole.
 
