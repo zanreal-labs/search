@@ -1,0 +1,225 @@
+---
+title: Overview
+description: In-memory fuzzy search for arrays of objects, with weighted fields, exact-match priority and automatic field detection. No index to build.
+---
+
+`@zanreal/search` searches an array of objects you already hold in memory. It
+scores every candidate, ranks exact matches above fuzzy ones, and - unless you
+tell it otherwise - works out which fields are worth searching on its own.
+
+There is no index to build, no server to run and no runtime dependencies.
+
+## Install
+
+```bash
+npm install @zanreal/search
+# or: pnpm add @zanreal/search
+# or: bun add @zanreal/search
+```
+
+The package ships ESM and CommonJS builds alongside TypeScript declarations,
+and requires Node.js 16 or newer.
+
+## First search
+
+`quickSearch` is the shortest path: give it data and a query, get matching
+items back.
+
+```ts
+import { quickSearch } from "@zanreal/search";
+
+const people = [
+  { name: "John Doe", email: "john@example.com", role: "developer" },
+  { name: "Jane Smith", email: "jane@example.com", role: "designer" },
+  { name: "Bob Johnson", email: "bob@example.com", role: "manager" },
+];
+
+quickSearch(people, "john");
+// → [{ name: "John Doe", ... }, { name: "Bob Johnson", ... }]
+```
+
+No `fields` argument was passed, so `name`, `email` and `role` were all
+detected and searched. Bob Johnson matches on his surname. John Doe ranks
+first because both his `name` and his `email` _begin_ with the query, and a
+prefix hit outscores a match buried mid-string.
+
+Matching is case-insensitive by default, and results come back ordered by
+relevance.
+
+## Scores and matches
+
+When you need to know _why_ something matched - to highlight the hit, or to
+discard weak results - use `search`. It returns each item together with its
+score and the individual field matches.
+
+```ts
+import { search } from "@zanreal/search";
+
+const results = search(people, "john");
+
+results[0].item; // { name: "John Doe", ... }
+results[0].score; // combined relevance score
+results[0].matches; // [{ field: "email", type: "exact-start", ... }, ...]
+```
+
+Every match carries a `type`, and the first rule that fires wins for a given
+field:
+
+| `type`          | Meaning                                      | Relative strength |
+| --------------- | -------------------------------------------- | ----------------- |
+| `exact-start`   | The value begins with the query              | Strongest         |
+| `exact-contain` | The query appears somewhere inside the value | Middle            |
+| `fuzzy`         | A word in the value is close to the query    | Weakest           |
+
+An item's `score` is the **sum** of every matching field's score, so breadth of
+match counts: an item matching three fields can outrank one with a single
+stronger hit. Ties are broken by the combined length of the matched values,
+shortest first.
+
+`searchItems` sits between `search` and `quickSearch`: it takes the same
+options object as `search` but returns bare items.
+
+## Typos
+
+Fuzzy matching runs only after exact matching fails to fire. The value is split
+on whitespace and each word is compared to the whole query by Levenshtein
+distance:
+
+```ts
+quickSearch(people, "johson");
+// → [{ name: "Bob Johnson", ... }]
+```
+
+By default a query must be at least 3 characters (`minFuzzyLength`) and reach
+70% similarity (`fuzzyThreshold`). Because the comparison is per word rather
+than across the whole field, a typo that straddles a word boundary is not
+caught.
+
+Fuzzy matches also carry no `position`, so highlighting code should branch on
+`type` rather than assume an offset is present.
+
+## Choosing the fields
+
+Field detection reads **only the first item in the array** and walks up to
+three levels deep, collecting every non-empty string property. Arrays, numbers,
+`null` and empty strings are skipped.
+
+That is convenient for uniform data and wrong in two common situations:
+
+- items with differing shapes, where a field absent from `data[0]` is never
+  searched at all
+- wide records, where you only care about two or three fields
+
+Both are fixed by naming the fields yourself, using dot notation for nested
+paths:
+
+```ts
+search(articles, "typescript", {
+  fields: ["title", "author.name", "meta.summary"],
+});
+```
+
+Every path you list must resolve to a string. Pointing `fields` at a number or
+an array throws a `TypeError` while matching, so map such values to strings
+before searching.
+
+## Weighting fields
+
+Left alone, the library assigns each field a weight derived from its name and
+its average length across the data, which favours short labels like `title`
+over long prose:
+
+| Field name                           | Base weight |
+| ------------------------------------ | ----------- |
+| `title`, `name`, `heading`           | 5           |
+| `description`, `summary`, `subtitle` | 3           |
+| `content`, `body`, `text`            | 1           |
+| anything else                        | 1           |
+
+That base is then multiplied by a length factor - from `2.0` for fields
+averaging under 50 characters down to `1.0` at 300 or more - so a short `title`
+lands on `10` while a long `content` field lands on `1`.
+
+The heuristic only recognises those English field names. If your records use
+`heading_text`, `label` or a non-English name, they all land on a base weight of
+`1` and are separated by length alone. State the weights explicitly when the
+ordering matters:
+
+```ts
+search(articles, "typescript", {
+  fieldWeights: {
+    title: 10,
+    "meta.summary": 5,
+    "content.body": 1,
+  },
+});
+```
+
+Weights are plain multipliers, so a title hit here scores ten times a body hit
+of the same kind. Keys must be the full dotted path, exactly as it appears in
+`fields`.
+
+### Derived weights are cached per array
+
+Automatic weights are computed once per array - identified by object identity -
+and reused for every later search of that same array. The cache is keyed only by
+the array, not by the `fields` you passed, so a field introduced by a later call
+has no cached statistics and silently falls back to weight `1`:
+
+```ts
+const data = [{ title: "alpha", body: "alpha ...long body..." }];
+
+search(data, "alpha", { fields: ["body"] });
+// statistics computed for `body` only
+
+search(data, "alpha", { fields: ["body", "title"] });
+// `title` was absent from the first call → weight 1, not its derived weight 10
+```
+
+In that example the `title` match scores `20` instead of `200`. This bites when
+you narrow or widen `fields` between calls on the same array, or mutate an array
+in place and expect the weights to follow. Two reliable ways around it: pass
+explicit `fieldWeights` so nothing is derived, or keep the `fields` set stable
+for the lifetime of an array.
+
+## Reusable searchers
+
+Repeating the same options at every call site gets tedious. `createSearcher`
+binds a configuration once and hands back a search function:
+
+```ts
+import { createSearcher } from "@zanreal/search";
+
+type Article = { title: string; body: string };
+
+const searchArticles = createSearcher<Article>({
+  fieldWeights: { title: 10, body: 1 },
+  fuzzyThreshold: 0.7,
+  limit: 20,
+});
+
+searchArticles(articles, "typescript");
+```
+
+The returned function yields full `SearchResult` objects, not bare items, and
+accepts a third argument that overrides the bound config for a single call:
+
+```ts
+searchArticles(articles, "typescript", { limit: 5 });
+```
+
+Tuning the searcher is then a one-line change:
+
+```diff
+ const searchArticles = createSearcher<Article>({
+   fieldWeights: { title: 10, body: 1 },
+-  fuzzyThreshold: 0.7,
++  fuzzyThreshold: 0.85,
+   limit: 20,
+ });
+```
+
+## Next
+
+See the [API reference](./api.en.mdx) for every export, option and type,
+including the cache helpers and the defaults each option falls back to.

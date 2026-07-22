@@ -1,0 +1,241 @@
+---
+title: Dokumentacja API
+description: "Pełny wykaz tego, co eksportuje @zanreal/search: pięć funkcji wyszukiwania, obsługa cache, DEFAULT_SEARCH_OPTIONS oraz typy SearchOptions, SearchResult i SearchMatch."
+---
+
+Wszystko poniżej eksportowane jest z głównego modułu paczki.
+
+## Funkcje wyszukiwania
+
+### `search`
+
+```ts
+function search<T>(data: T[], query: string, options?: SearchOptions): SearchResult<T>[];
+```
+
+Podstawowa funkcja. Zwraca pełne obiekty wyników (element, punktacja i trafienia
+w poszczególnych polach), posortowane malejąco według punktacji. Sięgaj po nią
+wtedy, gdy chcesz podświetlić trafienie albo pokazać użytkownikowi, dlaczego coś
+się znalazło.
+
+Trzy zachowania warto zapamiętać:
+
+- Puste zapytanie, albo złożone z samych białych znaków, kończy działanie od
+  razu i zwraca **wszystkie** elementy z `score: 0` oraz pustą tablicą
+  `matches`. Opcja `limit` nie jest wtedy brana pod uwagę.
+- Każdy element tablicy `data`, który JavaScript uznaje za fałsz (`null`,
+  `undefined`, `0`, pusty napis), jest pomijany, a nie zgłaszany jako błąd.
+- Element trafia do wyniku tylko wtedy, gdy dopasowało się przynajmniej jedno
+  pole.
+
+### `searchItems`
+
+```ts
+function searchItems<T>(data: T[], query: string, options?: SearchOptions): T[];
+```
+
+Dopasowuje i sortuje dokładnie tak samo jak `search`, ale pomija dane o
+punktacji. Odpowiednik `search(...).map((result) => result.item)`.
+
+### `quickSearch`
+
+```ts
+function quickSearch<T>(data: T[], query: string, fields?: string[]): T[];
+```
+
+`searchItems` ze wszystkimi opcjami pozostawionymi na wartościach domyślnych i
+bez obiektu konfiguracji do złożenia. Argument `fields` zawęża listę pól; jego
+pominięcie zostawia decyzję automatycznemu wykrywaniu.
+
+Nie ustawisz tutaj wag ani progów. Gdy są potrzebne, użyj `searchItems`.
+
+### `createSearcher`
+
+```ts
+function createSearcher<T>(
+  config: SearchOptions,
+): (data: T[], query: string, overrides?: Partial<SearchOptions>) => SearchResult<T>[];
+```
+
+Zapamiętuje konfigurację i zwraca funkcję wyszukującą do wielokrotnego użycia.
+Ta funkcja oddaje obiekty `SearchResult`, tak jak `search`, a inaczej niż
+`quickSearch`.
+
+Trzeci parametr płytko nadpisuje zapamiętaną konfigurację na czas jednego
+wywołania, co przydaje się głównie przy zmiennym `limit`:
+
+```ts
+const searchUsers = createSearcher<User>({
+  fieldWeights: { name: 5, email: 1 },
+});
+
+searchUsers(users, "kowalska"); // zapamiętana konfiguracja
+searchUsers(users, "kowalska", { limit: 5 }); // limit nadpisany
+```
+
+Samo zapamiętanie konfiguracji nic nie kosztuje: `createSearcher` domyka obiekt
+w domknięciu i rozwija go przy każdym wywołaniu. Nie licz więc na to, że
+przygotuje jakikolwiek indeks z wyprzedzeniem.
+
+### `createDocumentSearcher`
+
+```ts
+function createDocumentSearcher<T>(): (
+  data: T[],
+  query: string,
+  overrides?: Partial<SearchOptions>,
+) => SearchResult<T>[];
+```
+
+Gotowy wariant `createSearcher`. W obecnym wydaniu przekazuje
+`DEFAULT_SEARCH_OPTIONS` bez żadnych zmian, przez co
+`createDocumentSearcher<T>()(data, query)` działa identycznie jak
+`search(data, query)`.
+
+Traktuj go jako nazwane miejsce na przyszłe ustawienia dla dokumentów, a nie
+jako inne zachowanie. Jeśli zależy Ci na rankingu dopasowanym do długich
+tekstów, ustaw `fieldWeights` samodzielnie.
+
+## Obsługa cache
+
+Biblioteka utrzymuje trzy wewnętrzne cache pomiędzy wywołaniami:
+
+| Cache                  | Rodzaj    | Kluczowany po    | Zwalniany przez                           |
+| ---------------------- | --------- | ---------------- | ----------------------------------------- |
+| Napisy małymi literami | `Map`     | wartość napisu   | `clearSearchCaches()` albo limit rozmiaru |
+| Wykryte pola           | `WeakMap` | pierwszy element | odśmiecacz pamięci                        |
+| Statystyki pól         | `WeakMap` | tablica z danymi | odśmiecacz pamięci                        |
+
+Bez ograniczeń rośnie tylko cache napisów, a i on zatrzymuje się na 500
+wpisach: po przekroczeniu progu znika starsza połowa, a co setne wywołanie
+`search` przycina go dodatkowo, o ile zapełnił się powyżej połowy. Ustawienie
+`caseSensitive: true` omija go zupełnie, bo nie trzeba nic sprowadzać do małych
+liter.
+
+Obie struktury `WeakMap` nie trzymają Twoich danych przy życiu. Cache statystyk
+kluczowany jest wyłącznie po tablicy i nie ogląda się na przekazaną listę
+`fields` - co potrafi zaskoczyć przy rankingu, opisujemy to we
+[Wprowadzeniu](./index.pl.mdx).
+
+### `clearSearchCaches`
+
+```ts
+function clearSearchCaches(): void;
+```
+
+Czyści cache przetworzonych napisów i zeruje wewnętrzny licznik wywołań. Cache
+wykrytych pól oraz statystyk pól to `WeakMap` powiązane z Twoimi danymi, więc
+zwalnia je odśmiecacz pamięci.
+
+Przydaje się w długo działających procesach oraz między testami, które sprawdzają
+stan cache.
+
+### `getCacheStats`
+
+```ts
+function getCacheStats(): {
+  stringProcessingCacheSize: number;
+  searchCallCount: number;
+};
+```
+
+Podaje aktualny rozmiar cache napisów i liczbę wywołań `search` od ostatniego
+zerowania. Służy do podglądu i monitoringu, nie do sterowania logiką aplikacji.
+
+## Stałe
+
+### `DEFAULT_SEARCH_OPTIONS`
+
+```ts
+const DEFAULT_SEARCH_OPTIONS = {
+  fieldWeights: {},
+  fuzzyThreshold: 0.7,
+  minFuzzyLength: 3,
+  limit: 100,
+  caseSensitive: false,
+};
+```
+
+Wartości używane wszędzie tam, gdzie pominiesz opcję. Zwróć uwagę na `limit`:
+domyślnie wynosi `100`, więc nieskonfigurowane `search` nigdy nie odda więcej
+niż sto elementów.
+
+To zwykły obiekt, bez zamrożenia, a wartości domyślne odczytywane są z niego
+przy każdym wywołaniu. Nie modyfikuj go, tylko przekazuj opcje jawnie.
+
+## Typy
+
+### `SearchOptions`
+
+```ts
+interface SearchOptions {
+  fields?: string[];
+  fieldWeights?: Record<string, number>;
+  fuzzyThreshold?: number;
+  minFuzzyLength?: number;
+  limit?: number;
+  caseSensitive?: boolean;
+}
+```
+
+| Opcja            | Domyślnie | Znaczenie                                                                                                                                           |
+| ---------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fields`         | wykrywane | Ścieżki pól zapisane z kropką. Pominięcie oznacza wykrycie pól tekstowych z pierwszego elementu, do trzech poziomów w głąb. Każda musi być napisem. |
+| `fieldWeights`   | `{}`      | Mnożniki punktacji dla pól, kluczowane pełną ścieżką. Pola spoza listy dostają wagę wyliczoną automatycznie.                                        |
+| `fuzzyThreshold` | `0.7`     | Minimalne podobieństwo w zakresie od `0` do `1`, przy którym trafienie rozmyte się liczy. Wyższa wartość oznacza ostrzejsze kryterium.              |
+| `minFuzzyLength` | `3`       | Krótsze zapytania pomijają dopasowanie rozmyte. Dopasowanie dokładne działa przy każdej długości.                                                   |
+| `limit`          | `100`     | Maksymalna liczba wyników. Decyduje też o tym, jak wcześnie przerywany jest przegląd danych - patrz niżej.                                          |
+| `caseSensitive`  | `false`   | Rozróżnianie wielkości liter. Włączenie pomija cache napisów, bo nie trzeba nic sprowadzać do małych liter.                                         |
+
+#### `limit` przerywa przegląd danych
+
+Biblioteka nie sprawdza wszystkich elementów, żeby dopiero potem wybrać
+najlepsze. Zbiera trafienia w kolejności tablicy i **przerywa, gdy uzbiera ich
+`limit × 3`**, a sortuje wyłącznie to, co zdążyła zebrać.
+
+Przy `limit: 10` i tablicy liczącej 10 000 elementów przegląd kończy się na
+pierwszych 30 trafieniach. Mocniejsze dopasowanie leżące pod indeksem 9000 nigdy
+nie zostanie zobaczone. Kiedy jakość rankingu waży więcej niż czas odpowiedzi,
+podnieś `limit` albo zostaw go na domyślnej setce i przytnij wyniki po swojej
+stronie.
+
+### `SearchResult`
+
+```ts
+interface SearchResult<T> {
+  item: T;
+  score: number;
+  matches: SearchMatch[];
+}
+```
+
+`score` to suma punktów ze wszystkich dopasowanych pól. Element trafiający w trzy
+pola może więc wyprzedzić taki, który ma jedno, mocniejsze trafienie.
+
+### `SearchMatch`
+
+```ts
+interface SearchMatch {
+  field: string;
+  value: string;
+  score: number;
+  type: "exact-start" | "exact-contain" | "fuzzy";
+  position?: number;
+}
+```
+
+| Właściwość | Znaczenie                                                                                                       |
+| ---------- | --------------------------------------------------------------------------------------------------------------- |
+| `field`    | Ścieżka pola, które się dopasowało.                                                                             |
+| `value`    | Pierwotna wartość pola, z zachowaniem oryginalnej wielkości liter.                                              |
+| `score`    | Wkład tego pola w punktację całego elementu.                                                                    |
+| `type`     | `exact-start` (wartość zaczyna się od frazy), `exact-contain` (fraza występuje w środku) albo `fuzzy`.          |
+| `position` | Pozycja trafienia w `value`. Dla `exact-start` zawsze `0`, a **przy trafieniach rozmytych w ogóle jej nie ma**. |
+
+Skoro `position` bywa nieokreślone, kod podświetlający trafienia powinien
+rozgałęziać się po `type`, zamiast zakładać, że pozycja zawsze przyjdzie.
+
+## Licencja
+
+MIT. Kod źródłowy:
+[github.com/zanreal-labs/search](https://github.com/zanreal-labs/search).

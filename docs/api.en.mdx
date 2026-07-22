@@ -1,0 +1,234 @@
+---
+title: API reference
+description: "Every export of @zanreal/search: the five search functions, the cache helpers, DEFAULT_SEARCH_OPTIONS and the SearchOptions, SearchResult and SearchMatch types."
+---
+
+Everything below is exported from the package root.
+
+## Search functions
+
+### `search`
+
+```ts
+function search<T>(data: T[], query: string, options?: SearchOptions): SearchResult<T>[];
+```
+
+The core function. Returns full result objects - item, score and per-field
+matches - ordered by descending score. Use it when you need to rank, highlight
+or explain results.
+
+Three behaviours are worth knowing:
+
+- A blank or whitespace-only query short-circuits and returns **every** item
+  with `score: 0` and `matches: []`. The `limit` option is not applied on this
+  path.
+- Any falsy entry in `data`, such as `null` or `undefined`, is skipped rather
+  than throwing.
+- Items are returned only if at least one field matched.
+
+### `searchItems`
+
+```ts
+function searchItems<T>(data: T[], query: string, options?: SearchOptions): T[];
+```
+
+Identical matching and ordering to `search`, with the scoring metadata dropped.
+Equivalent to `search(...).map((result) => result.item)`.
+
+### `quickSearch`
+
+```ts
+function quickSearch<T>(data: T[], query: string, fields?: string[]): T[];
+```
+
+`searchItems` with every option left at its default and no options object to
+assemble. Pass `fields` to restrict the search; omit it to let field detection
+decide. There is no way to set weights or thresholds here - reach for
+`searchItems` when you need them.
+
+### `createSearcher`
+
+```ts
+function createSearcher<T>(
+  config: SearchOptions,
+): (data: T[], query: string, overrides?: Partial<SearchOptions>) => SearchResult<T>[];
+```
+
+Binds a configuration once and returns a reusable search function. The returned
+function produces `SearchResult` objects, like `search` and unlike
+`quickSearch`.
+
+The third parameter shallow-merges over the bound config for a single call,
+which is handy for varying `limit` per call site:
+
+```ts
+const searchUsers = createSearcher<User>({
+  fieldWeights: { name: 5, email: 1 },
+});
+
+searchUsers(users, "john"); // bound config
+searchUsers(users, "john", { limit: 5 }); // limit overridden
+```
+
+Binding a config carries no precomputation cost - `createSearcher` only closes
+over the object and spreads it per call. Do not expect it to build an index
+ahead of time.
+
+### `createDocumentSearcher`
+
+```ts
+function createDocumentSearcher<T>(): (
+  data: T[],
+  query: string,
+  overrides?: Partial<SearchOptions>,
+) => SearchResult<T>[];
+```
+
+A `createSearcher` preset. In the current release it applies
+`DEFAULT_SEARCH_OPTIONS` verbatim, which makes
+`createDocumentSearcher<T>()(data, query)` equivalent to `search(data, query)`.
+
+It exists as a named seam for document-oriented defaults; treat it as a
+readability choice rather than a behavioural one, and set `fieldWeights`
+yourself if you want document-shaped ranking today.
+
+## Cache helpers
+
+The library keeps three internal caches across calls:
+
+| Cache              | Kind      | Keyed on         | Cleared by                            |
+| ------------------ | --------- | ---------------- | ------------------------------------- |
+| Lowercased strings | `Map`     | the string value | `clearSearchCaches()`, or size limits |
+| Detected fields    | `WeakMap` | the first item   | garbage collection                    |
+| Field statistics   | `WeakMap` | the data array   | garbage collection                    |
+
+Only the string cache grows unboundedly, and it is capped at 500 entries: on
+reaching the cap the oldest half is dropped, and every 100th `search` call trims
+it further if it is more than half full. Setting `caseSensitive: true` bypasses
+it entirely, since no lowercasing is needed.
+
+The two `WeakMap`s hold no strong references to your data, so they cannot keep a
+discarded dataset alive. The field-statistics cache is keyed on the array alone
+and ignores the `fields` you passed - see [Overview](./index.en.mdx) for the
+ranking surprise that follows from it.
+
+### `clearSearchCaches`
+
+```ts
+function clearSearchCaches(): void;
+```
+
+Empties the lowercased-string cache and resets the internal call counter. The
+field-detection and field-statistics caches are `WeakMap`s keyed on your data,
+so they are reclaimed by the garbage collector instead.
+
+Useful in long-running processes, and between test cases that assert on cache
+state.
+
+### `getCacheStats`
+
+```ts
+function getCacheStats(): {
+  stringProcessingCacheSize: number;
+  searchCallCount: number;
+};
+```
+
+Reports the current size of the string cache and the number of `search` calls
+since the last reset. Intended for monitoring, not for control flow.
+
+## Constants
+
+### `DEFAULT_SEARCH_OPTIONS`
+
+```ts
+const DEFAULT_SEARCH_OPTIONS = {
+  fieldWeights: {},
+  fuzzyThreshold: 0.7,
+  minFuzzyLength: 3,
+  limit: 100,
+  caseSensitive: false,
+};
+```
+
+The values applied whenever an option is omitted. Note that `limit` defaults to
+`100`, so an unconfigured `search` never returns more than 100 items.
+
+This is a plain mutable object, and the defaults are read from it on every
+call. Treat it as read-only and pass options explicitly rather than mutating it.
+
+## Types
+
+### `SearchOptions`
+
+```ts
+interface SearchOptions {
+  fields?: string[];
+  fieldWeights?: Record<string, number>;
+  fuzzyThreshold?: number;
+  minFuzzyLength?: number;
+  limit?: number;
+  caseSensitive?: boolean;
+}
+```
+
+| Option           | Default | Description                                                                                                                    |
+| ---------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `fields`         | auto    | Dotted paths to search. Omit to detect string fields from the first item, up to three levels deep. Each path must be a string. |
+| `fieldWeights`   | `{}`    | Per-field score multipliers, keyed by full dotted path. Unlisted fields fall back to the automatic weight.                     |
+| `fuzzyThreshold` | `0.7`   | Minimum similarity, from `0` to `1`, for a fuzzy match to count. Higher is stricter.                                           |
+| `minFuzzyLength` | `3`     | Queries shorter than this skip fuzzy matching entirely. Exact matching still applies at any length.                            |
+| `limit`          | `100`   | Maximum results returned. Also governs how early the scan stops - see below.                                                   |
+| `caseSensitive`  | `false` | Match case exactly. When enabled, the internal string cache is bypassed.                                                       |
+
+#### `limit` stops the scan early
+
+The scan does not evaluate every item and then take the best. It collects
+matches in array order and **stops as soon as it has `limit × 3` of them**,
+sorting only that window.
+
+With `limit: 10` on a 10,000-item array the library stops at the first 30
+matches and ranks those, so a stronger match sitting at index 9,000 is never
+seen. When ranking quality matters more than speed, raise `limit` (or leave it
+at the `100` default) and slice the results yourself.
+
+### `SearchResult`
+
+```ts
+interface SearchResult<T> {
+  item: T;
+  score: number;
+  matches: SearchMatch[];
+}
+```
+
+`score` is the sum of the scores of every field that matched, so an item
+matching three fields outranks an otherwise equal item matching one.
+
+### `SearchMatch`
+
+```ts
+interface SearchMatch {
+  field: string;
+  value: string;
+  score: number;
+  type: "exact-start" | "exact-contain" | "fuzzy";
+  position?: number;
+}
+```
+
+| Property   | Description                                                                                         |
+| ---------- | --------------------------------------------------------------------------------------------------- |
+| `field`    | The dotted path that matched.                                                                       |
+| `value`    | The original field value, in its original case.                                                     |
+| `score`    | This field's contribution to the item score.                                                        |
+| `type`     | `exact-start` (value begins with the query), `exact-contain` (query appears within it), or `fuzzy`. |
+| `position` | Index of the match within `value`. `0` for `exact-start`, and **absent for `fuzzy` matches**.       |
+
+Because `position` is undefined on fuzzy matches, highlighting code should
+branch on `type` rather than assume an offset is present.
+
+## License
+
+MIT. Source at
+[github.com/zanreal-labs/search](https://github.com/zanreal-labs/search).
