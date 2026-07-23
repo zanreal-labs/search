@@ -70,7 +70,7 @@
   "bugs": {
     "url": "https://github.com/zanreal-labs/search/issues"
   },
-  "homepage": "https://github.com/zanreal-labs/search#readme",
+  "homepage": "https://zanreal.com/docs/oss/search",
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "^5.0.0"
