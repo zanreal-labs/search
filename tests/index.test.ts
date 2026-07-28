@@ -413,3 +413,45 @@ test("exact contain matches have minimum score guarantee", () => {
   expect(results[0]?.score).toBeGreaterThan(0);
   expect(results[0]?.matches[0]?.type).toBe('exact-contain');
 });
+
+// Test that non-string field values are skipped instead of crashing
+test("search skips non-string values behind explicit field paths", () => {
+  const data = [
+    { name: 'Widget', price: 42, inStock: true, meta: { sku: 'W-1' } },
+    { name: 'Gadget', price: 7, inStock: false, meta: { sku: 'G-1' } }
+  ];
+
+  const results = search(data, 'widget', {
+    fields: ['name', 'price', 'inStock', 'meta']
+  });
+
+  expect(results).toHaveLength(1);
+  expect(results[0]?.item.name).toBe('Widget');
+  expect(results[0]?.matches).toHaveLength(1);
+  expect(results[0]?.matches[0]?.field).toBe('name');
+});
+
+test("search does not match numeric field values", () => {
+  const data = [{ name: 'Widget', price: 42 }];
+
+  const results = search(data, '42', { fields: ['price'] });
+
+  expect(results).toHaveLength(0);
+});
+
+// Test the lowest length weight, used for fields averaging 300+ characters
+test("long fields score lower than short fields for the same query", () => {
+  const filler = 'this is filler prose about document relevance and scoring behaviour. ';
+  const data = [
+    { title: 'ranking', body: filler.repeat(6) },
+    { title: 'unrelated heading', body: `${filler.repeat(6)} ranking` }
+  ];
+
+  const results = search(data, 'ranking');
+
+  expect(results).toHaveLength(2);
+  expect(results[0]?.item.title).toBe('ranking');
+  expect(results[0]?.matches[0]?.field).toBe('title');
+  expect(results[1]?.matches[0]?.field).toBe('body');
+  expect(results[0]?.score).toBeGreaterThan(results[1]?.score ?? 0);
+});

@@ -166,7 +166,7 @@ function leakVerdict(growthPercent: number): string {
 function printLeakAnalysis(memorySnapshots: number[]): void {
   const start = memorySnapshots[0];
   const end = memorySnapshots.at(-1);
-  if (memorySnapshots.length < 3 || !start || !end) return;
+  if (memorySnapshots.length < 3 || start === undefined || end === undefined) return;
 
   const growth = end - start;
   const growthPercent = (growth / start) * 100;

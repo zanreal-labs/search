@@ -108,8 +108,10 @@ function levenshteinDistance(str1: string, str2: string): number {
 
 /**
  * Get nested value from object using dot notation
+ * Returns whatever the path resolves to, which is not always a string when
+ * callers pass explicit field paths, so every caller has to narrow it
  */
-function getNestedValue(obj: any, path: string): string {
+function getNestedValue(obj: any, path: string): unknown {
   return (
     path.split(".").reduce((current, key) => {
       if (current && typeof current === "object" && key in current) {
@@ -413,7 +415,8 @@ function scoreItem<T>(item: T, context: ScoringContext): SearchResult<T> | null 
 
   for (const field of searchFields) {
     const text = getNestedValue(item, field);
-    if (!text) continue;
+    // Explicit field paths can resolve to numbers, booleans or objects
+    if (typeof text !== "string" || !text) continue;
 
     // Determine field weight
     const fieldWeight =
