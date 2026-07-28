@@ -260,7 +260,7 @@ test("fuzzy matching returns null when no match found", () => {
     fuzzyThreshold: 0.9, // High threshold
     minFuzzyLength: 3
   });
-  expect(results.length).toBe(0);
+  expect(results).toHaveLength(0);
 });
 
 // Test for search cache cleanup (lines 270-273)
@@ -299,7 +299,7 @@ test("search handles undefined items in array", () => {
   ];
 
   const results = search(data, 'john');
-  expect(results.length).toBe(1);
+  expect(results).toHaveLength(1);
   expect(results[0]?.item.name).toBe('John');
 });
 
@@ -311,7 +311,7 @@ test("search early termination with large datasets", () => {
   }));
 
   const results = search(largeData, 'target', { limit: 10 });
-  expect(results.length).toBe(10); // Should be limited
+  expect(results).toHaveLength(10); // Should be limited
 });
 
 // Test for createDocumentSearcher (lines 491-497)
@@ -346,7 +346,7 @@ test("clearSearchCaches and getCacheStats work correctly", () => {
 test("case sensitive search processes strings correctly", () => {
   const data = [{ name: 'John' }, { name: 'jane' }]; // Different names to avoid confusion
   const results = search(data, 'John', { caseSensitive: true });
-  expect(results.length).toBe(1);
+  expect(results).toHaveLength(1);
   expect(results[0]?.item.name).toBe('John');
 });
 
@@ -360,7 +360,7 @@ test("field weight calculation based on length", () => {
   ];
 
   const results = search(data, 'short');
-  expect(results.length).toBe(1);
+  expect(results).toHaveLength(1);
 
   // Title match should have higher score than content match due to field weighting
   const titleMatch = results[0]?.matches.find(m => m.field === 'title');
@@ -375,7 +375,7 @@ test("position penalty affects exact contain match scores", () => {
   ];
 
   const results = search(data, 'test');
-  expect(results.length).toBe(2);
+  expect(results).toHaveLength(2);
 
   // Earlier position should have higher score
   const firstResult = results.find(r => r.item.text === 'test at start');
@@ -409,7 +409,7 @@ test("exact contain matches have minimum score guarantee", () => {
   const data = [{ longField: 'this is a very long field that should still get minimum score when matched at the end: target' }];
   const results = search(data, 'target');
 
-  expect(results.length).toBe(1);
+  expect(results).toHaveLength(1);
   expect(results[0]?.score).toBeGreaterThan(0);
   expect(results[0]?.matches[0]?.type).toBe('exact-contain');
 });
