@@ -1,6 +1,6 @@
 {
   "name": "@zanreal/search",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A powerful TypeScript fuzzy search library with intelligent scoring, exact match prioritization, and automatic field detection for any object structure",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
