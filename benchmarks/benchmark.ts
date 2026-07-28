@@ -1,4 +1,5 @@
-import { performance } from 'perf_hooks';
+import { writeFileSync } from 'node:fs';
+import { performance } from 'node:perf_hooks';
 
 // Benchmark configuration
 export interface BenchmarkConfig {
@@ -63,7 +64,7 @@ export function generateProducts(count: number) {
     brand: brands[i % brands.length] || 'Unknown Brand',
     description: `High-quality ${(products[i % products.length] || 'product').toLowerCase()} from ${brands[i % brands.length] || 'Unknown Brand'} with advanced features and premium build quality. Perfect for both personal and professional use.`,
     price: Math.floor(Math.random() * 2000) + 50,
-    rating: parseFloat((Math.random() * 2 + 3).toFixed(1)),
+    rating: Number.parseFloat((Math.random() * 2 + 3).toFixed(1)),
     inStock: Math.random() > 0.2,
     tags: [
       (products[i % products.length] || 'product').toLowerCase(),
@@ -116,7 +117,7 @@ export function generateDocuments(count: number) {
 
 // Benchmark runner
 export class BenchmarkRunner {
-  private results: BenchmarkResult[] = [];
+  private readonly results: BenchmarkResult[] = [];
 
   async runBenchmark<T>(
     config: BenchmarkConfig,
@@ -215,6 +216,7 @@ export class BenchmarkRunner {
     }
   }
 
+  /** Write the collected results to disk and return the file path */
   exportResults(filename?: string): string {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filepath = filename || `benchmark-results-${timestamp}.json`;
@@ -230,7 +232,9 @@ export class BenchmarkRunner {
       results: this.results
     };
 
-    return JSON.stringify(exportData, null, 2);
+    writeFileSync(filepath, JSON.stringify(exportData, null, 2));
+
+    return filepath;
   }
 }
 

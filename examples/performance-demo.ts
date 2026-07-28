@@ -118,7 +118,7 @@ function ecommerceSearch(dataset: Product[], query: string, options: EcommerceSe
   }
 
   if (minRating) {
-    filteredData = filteredData.filter(item => parseFloat(item.rating) >= minRating);
+    filteredData = filteredData.filter(item => Number.parseFloat(item.rating) >= minRating);
   }
 
   if (inStockOnly) {
@@ -141,7 +141,7 @@ function ecommerceSearch(dataset: Product[], query: string, options: EcommerceSe
   if (sortBy === 'price') {
     results.sort((a, b) => a.item.price - b.item.price);
   } else if (sortBy === 'rating') {
-    results.sort((a, b) => parseFloat(b.item.rating) - parseFloat(a.item.rating));
+    results.sort((a, b) => Number.parseFloat(b.item.rating) - Number.parseFloat(a.item.rating));
   }
   // 'relevance' keeps search score sorting
 
