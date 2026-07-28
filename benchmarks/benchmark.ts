@@ -64,7 +64,7 @@ export function generateProducts(count: number) {
     brand: brands[i % brands.length] || 'Unknown Brand',
     description: `High-quality ${(products[i % products.length] || 'product').toLowerCase()} from ${brands[i % brands.length] || 'Unknown Brand'} with advanced features and premium build quality. Perfect for both personal and professional use.`,
     price: Math.floor(Math.random() * 2000) + 50,
-    rating: Number.parseFloat((Math.random() * 2 + 3).toFixed(1)),
+    rating: parseFloat((Math.random() * 2 + 3).toFixed(1)),
     inStock: Math.random() > 0.2,
     tags: [
       (products[i % products.length] || 'product').toLowerCase(),
