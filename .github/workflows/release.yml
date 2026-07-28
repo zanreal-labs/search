@@ -5,6 +5,14 @@ on:
     branches:
       - main
 
+# Scoped to what changesets/action actually needs: it pushes the version bump and tags
+# (contents), opens the release pull request (pull-requests), and npm provenance is minted from
+# the OIDC token (id-token), which `publishConfig.provenance` requires at publish time.
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
@@ -18,13 +26,19 @@ jobs:
       - name: Prepare
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
+      # This job holds NPM_TOKEN, so it is the one place a dependency lifecycle script would be
+      # most valuable to an attacker. Install exactly what the lockfile resolves and run none of
+      # them; the release build needs neither.
       - name: Install Dependencies
         run: bun install --frozen-lockfile --ignore-scripts
 
-      - name: Install Dependencies
-        run: bun run build
-
-      - name: Publish to npm
-        run: bun publish --access public
+      # `bun run release` builds and then calls `changeset publish`, which shells out to
+      # `npm publish`. npm, not `bun publish`, is what honours `publishConfig.provenance`.
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        with:
+          publish: bun run release
         env:
-          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
