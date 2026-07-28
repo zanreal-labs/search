@@ -148,7 +148,8 @@ test("detectStringFields handles nested objects and arrays", () => {
   expect(results.length).toBeGreaterThanOrEqual(1);
 });
 
-// Test for string cache cleanup (lines 163-164)
+// The periodic trim in trackSearchCall: one key per search call never fills the cache, so what
+// this pins is that 600 calls stay bounded well under the limit.
 test("string processing cache cleanup works", () => {
   clearSearchCaches(); // Start with clean cache
 
@@ -162,8 +163,9 @@ test("string processing cache cleanup works", () => {
   expect(stats.stringProcessingCacheSize).toBeLessThanOrEqual(500); // Should trigger cleanup
 });
 
-// Test for cache cleanup in getProcessedString (lines 163-164)
-test("getProcessedString cache cleanup triggers when cache is full", () => {
+// Also the periodic trim, from the other side: 510 calls, and the cache never gets near 500
+// because every hundredth call shrinks it first.
+test("the string cache stays bounded across hundreds of searches", () => {
   clearSearchCaches(); // Start fresh
 
   // We need to bypass the search function's cache cleanup (every 100 calls)
@@ -187,6 +189,26 @@ test("getProcessedString cache cleanup triggers when cache is full", () => {
   const stats = getCacheStats();
   // The cache should have been cleaned up when it hit 500, so should be less than 500
   expect(stats.stringProcessingCacheSize).toBeLessThan(500);
+});
+
+// The eviction inside getProcessedString, which the two tests above cannot reach: they add
+// roughly one key per search call, and the periodic trim shrinks the cache long before it
+// fills. Crossing the limit takes a single search over more distinct strings than the cache
+// holds.
+test("the string cache evicts half of itself when one search fills it", () => {
+  const data = Array.from({ length: 600 }, (_, i) => ({ name: `Alpha${i} Widget` }));
+  clearSearchCaches();
+
+  const results = search(data, 'alpha599', { fields: ['name'] });
+  const stats = getCacheStats();
+
+  // A single call, so the periodic trim returned early and the only thing that can have
+  // shrunk the cache is the eviction in getProcessedString.
+  expect(stats.searchCallCount).toBe(1);
+  expect(stats.stringProcessingCacheSize).toBeGreaterThan(0);
+  expect(stats.stringProcessingCacheSize).toBeLessThan(data.length);
+  // Evicting halfway through a search must not cost a match.
+  expect(results[0]?.item.name).toBe('Alpha599 Widget');
 });
 
 // Test specifically for lines 163-164 cache cleanup in getProcessedString
