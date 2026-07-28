@@ -871,3 +871,7 @@ function monitoredSearch(data, query, options = {}) {
 ```
 
 ---
+
+## Maintained by
+
+`@zanreal/search` is maintained by [ZanReal](https://zanreal.com) as part of its [OSS Program](https://zanreal.com/oss).
