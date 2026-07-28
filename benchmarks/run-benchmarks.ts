@@ -8,9 +8,7 @@ import {
 
 import {
   search,
-  searchItems,
   quickSearch,
-  createSearcher,
   createDocumentSearcher
 } from '../src/index.ts';
 
@@ -96,8 +94,8 @@ async function main() {
   runner.printSummary();
 
   // Export results
-  const resultsJson = runner.exportResults();
-  console.log('\n💾 Benchmark results exported to JSON format');
+  const resultsPath = runner.exportResults();
+  console.log(`\n💾 Benchmark results exported to ${resultsPath}`);
 
   // Additional performance insights
   console.log('\n💡 Performance Insights:');
@@ -141,7 +139,11 @@ async function main() {
 
 // Run benchmarks when executed directly
 if (import.meta.main) {
-  main().catch(console.error);
+  try {
+    await main();
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 export { main };

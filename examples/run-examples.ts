@@ -2,11 +2,11 @@
 // Interactive Examples Runner - Universal Search Library
 // Run this to explore examples interactively: bun examples/run-examples.ts
 
-import { readdir } from 'fs/promises';
-import { spawn } from 'child_process';
-import { createInterface } from 'readline';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { spawn } from 'node:child_process';
+import { readdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { createInterface } from 'node:readline';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -31,6 +31,12 @@ interface Example {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   duration: string;
 }
+
+const difficultyColors: Record<Example['difficulty'], string> = {
+  Beginner: colors.green,
+  Intermediate: colors.yellow,
+  Advanced: colors.red
+};
 
 const examples: Example[] = [
   {
@@ -84,9 +90,7 @@ function printMenu(): void {
   console.log(`${colors.bright}Available Examples:${colors.reset}\n`);
 
   examples.forEach((example, index) => {
-    const difficultyColor = example.difficulty === 'Beginner' ? colors.green
-      : example.difficulty === 'Intermediate' ? colors.yellow
-        : colors.red;
+    const difficultyColor = difficultyColors[example.difficulty];
 
     console.log(`${colors.white}${index + 1}.${colors.reset} ${example.title}`);
     console.log(`   ${colors.dim}${example.description}${colors.reset}`);
@@ -105,7 +109,8 @@ async function runExample(exampleFile: string): Promise<void> {
   console.log(`${colors.cyan}${colors.bright}Running: ${exampleFile}${colors.reset}\n`);
 
   return new Promise((resolve, reject) => {
-    const child = spawn('bun', [filePath], {
+    // Reuse the runtime that is already executing this script (absolute path)
+    const child = spawn(process.execPath, [filePath], {
       stdio: 'inherit',
       cwd: process.cwd()
     });
@@ -142,7 +147,7 @@ async function runAllExamples(): Promise<void> {
         await waitForInput();
       }
     } catch (error) {
-      console.log(`${colors.red}Stopping due to error in ${example.file}${colors.reset}`);
+      console.log(`${colors.red}Stopping due to error in ${example.file}: ${(error as Error).message}${colors.reset}`);
       break;
     }
   }
@@ -210,7 +215,7 @@ async function main(): Promise<void> {
         continue;
       }
 
-      const exampleIndex = parseInt(choice) - 1;
+      const exampleIndex = Number.parseInt(choice, 10) - 1;
 
       if (exampleIndex >= 0 && exampleIndex < examples.length) {
         const example = examples[exampleIndex]!;
@@ -241,4 +246,4 @@ process.on('SIGINT', () => {
 });
 
 // Run the interactive menu
-main();
+await main();

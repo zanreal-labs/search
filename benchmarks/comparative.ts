@@ -1,13 +1,12 @@
-import { performance } from 'perf_hooks';
+import { performance } from 'node:perf_hooks';
 import {
   search,
   searchItems,
   quickSearch,
   createSearcher,
-  createDocumentSearcher,
-  DEFAULT_SEARCH_OPTIONS
+  createDocumentSearcher
 } from '../src/index.ts';
-import { generateProducts, BenchmarkRunner } from './benchmark.ts';
+import { generateProducts } from './benchmark.ts';
 
 interface ComparativeResult {
   functionName: string;

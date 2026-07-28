@@ -1,4 +1,5 @@
-import { performance } from 'perf_hooks';
+import { writeFileSync } from 'node:fs';
+import { performance } from 'node:perf_hooks';
 
 // Benchmark configuration
 export interface BenchmarkConfig {
@@ -116,7 +117,7 @@ export function generateDocuments(count: number) {
 
 // Benchmark runner
 export class BenchmarkRunner {
-  private results: BenchmarkResult[] = [];
+  private readonly results: BenchmarkResult[] = [];
 
   async runBenchmark<T>(
     config: BenchmarkConfig,
@@ -215,6 +216,7 @@ export class BenchmarkRunner {
     }
   }
 
+  /** Write the collected results to disk and return the file path */
   exportResults(filename?: string): string {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const filepath = filename || `benchmark-results-${timestamp}.json`;
@@ -230,7 +232,9 @@ export class BenchmarkRunner {
       results: this.results
     };
 
-    return JSON.stringify(exportData, null, 2);
+    writeFileSync(filepath, JSON.stringify(exportData, null, 2));
+
+    return filepath;
   }
 }
 

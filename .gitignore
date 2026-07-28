@@ -10,6 +10,9 @@ dist
 coverage
 *.lcov
 
+# benchmark output
+benchmark-results-*.json
+
 # logs
 logs
 _.log

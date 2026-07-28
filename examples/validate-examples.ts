@@ -2,10 +2,10 @@
 // Example Validation Script - Universal Search Library
 // This script validates that all examples work correctly
 
-import { spawn } from 'child_process';
-import { readdir, access } from 'fs/promises';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
+import { spawn } from 'node:child_process';
+import { access, readdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -43,7 +43,8 @@ async function runExample(exampleFile: string): Promise<ExampleResult> {
 
   return new Promise((resolve) => {
     const startTime = Date.now();
-    const child = spawn('bun', [filePath], {
+    // Reuse the runtime that is already executing this script (absolute path)
+    const child = spawn(process.execPath, [filePath], {
       stdio: 'pipe',
       cwd: process.cwd()
     });
@@ -172,7 +173,9 @@ process.on('SIGINT', () => {
 });
 
 // Run validation
-validateExamples().catch(error => {
+try {
+  await validateExamples();
+} catch (error) {
   console.error(`${colors.red}❌ Validation error: ${(error as Error).message}${colors.reset}`);
   process.exit(1);
-});
+}

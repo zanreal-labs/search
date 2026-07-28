@@ -19,6 +19,7 @@ async function runFullBenchmarkSuite() {
 
     // Import and run main benchmarks by importing the main function
     const { main: runMainBenchmarks } = await import('./run-benchmarks.ts');
+    await runMainBenchmarks();
 
     // 2. Run comparative benchmarks
     console.log('\n' + '='.repeat(60));
@@ -73,9 +74,9 @@ async function runFullBenchmarkSuite() {
 }
 
 // Check for command line arguments
-const args = process.argv.slice(2);
+const args = new Set(process.argv.slice(2));
 
-if (args.includes('--help') || args.includes('-h')) {
+if (args.has('--help') || args.has('-h')) {
   console.log('🚀 @zanreal/search Benchmark Suite');
   console.log('');
   console.log('Usage: bun benchmarks/full-suite.ts [options]');
@@ -90,7 +91,7 @@ if (args.includes('--help') || args.includes('-h')) {
   process.exit(0);
 }
 
-if (args.includes('--gc')) {
+if (args.has('--gc')) {
   if (typeof global.gc !== 'function') {
     console.warn('⚠️  Garbage collection not available. Run with: node --expose-gc');
   } else {
@@ -99,4 +100,4 @@ if (args.includes('--gc')) {
 }
 
 // Run the benchmark suite
-runFullBenchmarkSuite().catch(console.error);
+await runFullBenchmarkSuite();

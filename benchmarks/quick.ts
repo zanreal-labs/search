@@ -1,11 +1,6 @@
-import {
-  BenchmarkRunner,
-  BENCHMARK_CONFIGS,
-  generateUsers,
-  generateProducts
-} from './benchmark.ts';
+import { BenchmarkRunner, generateUsers } from './benchmark.ts';
 
-import { search, quickSearch } from '../src/index.ts';
+import { quickSearch } from '../src/index.ts';
 
 async function quickBenchmark() {
   console.log('⚡ Quick Performance Check');
@@ -17,7 +12,6 @@ async function quickBenchmark() {
 
   // Quick test with smaller datasets
   const users = generateUsers(50);
-  const products = generateProducts(100);
 
   console.log('🔍 Testing basic search performance...');
 
@@ -53,7 +47,11 @@ async function quickBenchmark() {
 }
 
 if (import.meta.main) {
-  quickBenchmark().catch(console.error);
+  try {
+    await quickBenchmark();
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 export { quickBenchmark };
