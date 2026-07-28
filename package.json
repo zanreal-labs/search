@@ -7,6 +7,7 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "publishConfig": {
+    "access": "public",
     "provenance": true
   },
   "exports": {
@@ -27,6 +28,8 @@
     "build:esm": "bun build src/index.ts --outfile=dist/index.mjs --format=esm --minify",
     "build:cjs": "bun build src/index.ts --outfile=dist/index.js --format=cjs --minify",
     "build:types": "tsc --project tsconfig.build.json",
+    "changeset": "changeset",
+    "release": "bun run build && changeset publish",
     "prepublishOnly": "bun run build",
     "test": "bun test",
     "test:example": "node example.mjs",
@@ -65,13 +68,14 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zanreal-labs/search.git"
+    "url": "git+https://github.com/zanreal-labs/search.git"
   },
   "bugs": {
     "url": "https://github.com/zanreal-labs/search/issues"
   },
   "homepage": "https://zanreal.com/docs/oss/search",
   "devDependencies": {
+    "@changesets/cli": "^2.31.1",
     "@types/bun": "latest",
     "typescript": "^5.0.0"
   },
