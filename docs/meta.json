@@ -1,5 +1,5 @@
 {
-  "title": "@zanreal/search",
+  "title": "Search",
   "description": "Fuzzy search over arrays of objects.",
   "pages": ["index", "api"]
 }
