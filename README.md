@@ -2,6 +2,9 @@
 
 A powerful TypeScript fuzzy search library with intelligent scoring, exact match prioritization, and automatic field detection for any object structure.
 
+Full documentation, in English and Polish, is published at
+<https://zanreal.com/docs/oss/search> and authored in [`docs/`](./docs).
+
 ## Features
 
 - **Universal Search**: Works with any data structure without configuration
