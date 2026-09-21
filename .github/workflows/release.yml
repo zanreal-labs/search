@@ -32,7 +32,7 @@ jobs:
       # the OIDC *audience* for trusted publishing, and it also pins Node 22: npm 11 refuses
       # to run on the Node the runner would otherwise pick for it.
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
