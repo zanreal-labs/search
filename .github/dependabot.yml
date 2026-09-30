@@ -11,3 +11,7 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - type:actions
+    ignore:
+      # changesets/action v2 needs @changesets/cli v3; bump both together by hand.
+      - dependency-name: 'changesets/action'
+        update-types: ['version-update:semver-major']
