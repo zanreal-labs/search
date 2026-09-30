@@ -54,9 +54,12 @@ jobs:
       # `npm publish`. npm, not `bun publish`, is what honours `publishConfig.provenance`.
       - name: Create Release Pull Request or Publish to npm
         id: changesets
-        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        # v1 on purpose: v2 requires Changesets CLI v3 and fails immediately against the CLI v2
+        # this repo uses ("use Changesets action v1 instead"). Every Release run since the
+        # Dependabot bump in #28 failed that way. Move to v2 together with @changesets/cli v3.
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
-          publish-script: bun run release
+          publish: bun run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
