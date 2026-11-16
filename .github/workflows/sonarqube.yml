@@ -101,7 +101,7 @@ jobs:
         run: bun test --coverage
 
       - name: SonarQube scan
-        uses: sonarsource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+        uses: sonarsource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
         env:
           # SONAR_HOST_URL is deliberately unset: the action targets SonarQube
           # Cloud by default and only needs the URL for self-hosted servers.
