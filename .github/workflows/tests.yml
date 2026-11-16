@@ -28,6 +28,8 @@ jobs:
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
-          fail_ci_if_error: true
+          # Dependabot PRs get no repository secrets, so the upload has no token
+          # there; fail the job only where the token is available.
+          fail_ci_if_error: ${{ github.actor != 'dependabot[bot]' }}
           directory: ./coverage
           token: ${{ secrets.CODECOV_TOKEN }}
