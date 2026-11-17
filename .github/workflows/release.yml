@@ -34,12 +34,12 @@ jobs:
       # bun installs the dependencies, but `changeset publish` shells out to `npm publish`,
       # so npm is what actually talks to the registry - and it needs two things bun cannot
       # provide. This step writes the .npmrc pointing at npmjs.org, which is how npm derives
-      # the OIDC *audience* for trusted publishing, and it also pins Node 22: npm 11 refuses
+      # the OIDC *audience* for trusted publishing, and it also pins Node 26: npm 11 refuses
       # to run on the Node the runner would otherwise pick for it.
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
           registry-url: https://registry.npmjs.org
 
       # ubuntu-latest ships npm 10, which can sign provenance but cannot perform the trusted
